@@ -6,7 +6,7 @@ export default function App() {
   const [logs, setLogs] = useState<any[]>([]);
   const [fileName, setFileName] = useState<string>('');
   const [activeSheet, setActiveSheet] = useState<number>(0);
-  const [showDialog1C, setShowDialog1C] = useState<boolean>(false);
+  // const [showDialog1C, setShowDialog1C] = useState<boolean>(false); // Временно отключено
   const [pendingFile, setPendingFile] = useState<ArrayBuffer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -27,20 +27,21 @@ export default function App() {
       setActiveSheet(0);
       
       // Показываем диалог о добавлении листа 1С
-      setShowDialog1C(true);
+      // setShowDialog1C(true); // Временно отключено
     };
     reader.readAsArrayBuffer(file);
   };
 
-  const handleAddSheet1C = (add: boolean) => {
-    if (add && pendingFile) {
-      // Переобрабатываем с листом 1С
-      const { result: res, logs: lgs } = processWorkbookWith1C(pendingFile, true);
-      setResult(res);
-      setLogs(lgs);
-    }
-    setShowDialog1C(false);
-  };
+  // Временно отключено - создание листа 1С
+  // const handleAddSheet1C = (add: boolean) => {
+  //   if (add && pendingFile) {
+  //     // Переобрабатываем с листом 1С
+  //     const { result: res, logs: lgs } = processWorkbookWith1C(pendingFile, true);
+  //     setResult(res);
+  //     setLogs(lgs);
+  //   }
+  //   setShowDialog1C(false);
+  // };
 
   const handleExport = () => {
     if (result?.workbook) {
@@ -53,7 +54,7 @@ export default function App() {
     setLogs([]);
     setFileName('');
     setActiveSheet(0);
-    setShowDialog1C(false);
+    // setShowDialog1C(false); // Временно отключено
     setPendingFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -235,8 +236,8 @@ export default function App() {
         )}
       </main>
 
-      {/* Dialog 1C */}
-      {showDialog1C && (
+      {/* Dialog 1C - Временно отключено */}
+      {/* {showDialog1C && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md">
             <div className="flex items-center gap-4 mb-6">
@@ -262,7 +263,7 @@ export default function App() {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Floating Download Button */}
       {result && (

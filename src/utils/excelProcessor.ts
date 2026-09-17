@@ -669,7 +669,8 @@ function applyTMZStyles(ws: XLSX.WorkSheet) {
   ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: 12 } });
 }
 
-export function processWorkbookWith1C(file: ArrayBuffer, addSheet1C: boolean): { result: ProcessingResult; logs: ProcessingLog[] } {
+// Временно отключено - создание листа 1С
+export function processWorkbookWith1C(file: ArrayBuffer, addSheet1C: boolean = false): { result: ProcessingResult; logs: ProcessingLog[] } {
   const logs: ProcessingLog[] = [];
   
   try {
@@ -799,9 +800,10 @@ export function processWorkbookWith1C(file: ArrayBuffer, addSheet1C: boolean): {
       { name: 'ТМЦ уник', data: tmzData, formulas: tmzFormulas },
     ];
 
-    if (addSheet1C) {
-      logs.push({ step: 'Лист 1С', status: 'success', message: 'Лист 1С добавлен' });
-    }
+    // Временно отключено - создание листа 1С
+    // if (addSheet1C) {
+    //   logs.push({ step: 'Лист 1С', status: 'success', message: 'Лист 1С добавлен' });
+    // }
 
     logs.push({ step: 'Завершение', status: 'success', message: `Обработка завершена. Листов: ${sheets.length}` });
 
