@@ -552,8 +552,9 @@ function applySvodStyles(ws: XLSX.WorkSheet, data: any[][]) {
 function applySMRStyles(ws: XLSX.WorkSheet) {
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
   
+  // Обрабатываем все 14 колонок (A-N, 0-13)
   for (let R = range.s.r; R <= range.e.r; R++) {
-    for (let C = range.s.c; C <= Math.min(range.e.c, 7); C++) {
+    for (let C = range.s.c; C <= Math.min(range.e.c, 13); C++) {
       const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
       
       // Создаём ячейку если её нет
@@ -590,17 +591,18 @@ function applySMRStyles(ws: XLSX.WorkSheet) {
     }
   }
   
-  // Обновляем диапазон листа
+  // Обновляем диапазон листа (все 14 колонок A-N)
   const maxRow = Math.max(...Object.keys(ws).filter(k => k.match(/^[A-Z]+\d+$/)).map(k => parseInt(k.match(/\d+/)?.[0] || '0')));
-  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: 7 } });
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: 13 } });
 }
 
 // Применение стилей к листу ТМЦ уник
 function applyTMZStyles(ws: XLSX.WorkSheet) {
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
   
+  // Обрабатываем все 13 колонок (A-M, 0-12)
   for (let R = range.s.r; R <= range.e.r; R++) {
-    for (let C = range.s.c; C <= Math.min(range.e.c, 5); C++) {
+    for (let C = range.s.c; C <= Math.min(range.e.c, 12); C++) {
       const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
       
       // Создаём ячейку если её нет
@@ -637,9 +639,9 @@ function applyTMZStyles(ws: XLSX.WorkSheet) {
     }
   }
   
-  // Обновляем диапазон листа
+  // Обновляем диапазон листа (все 13 колонок A-M)
   const maxRow = Math.max(...Object.keys(ws).filter(k => k.match(/^[A-Z]+\d+$/)).map(k => parseInt(k.match(/\d+/)?.[0] || '0')));
-  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: 5 } });
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: 12 } });
 }
 
 export function processWorkbookWith1C(file: ArrayBuffer, addSheet1C: boolean): { result: ProcessingResult; logs: ProcessingLog[] } {
