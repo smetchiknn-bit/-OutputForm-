@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx-js-style';
 
 export interface SheetData {
   name: string;
-   any[][];
+  data: any[][];
   formulas?: any[][];
 }
 
@@ -39,7 +39,8 @@ export function validateWorkbook(wb: XLSX.WorkBook): { valid: boolean; message: 
   return { valid: true, message: 'Структура файла проверена успешно' };
 }
 
-export function performNumbering( any[][]): {  any[][]; nElements: number } {
+export function performNumbering(inputData: any[][]): { data: any[][]; nElements: number } {
+  const data = inputData;
   const nElements = data.length - 1;
   let nO = 0, nK = 0, nC = 0, nU = 0, nE = 0;
   let nL1 = 0, nL2 = 0, nL3 = 0, nL4 = 0;
@@ -157,7 +158,8 @@ export function performNumbering( any[][]): {  any[][]; nElements: number } {
   return { data, nElements };
 }
 
-export function computeFormulas( any[][], nElements: number, smrUnikData: any[][], tmzUnikData: any[][]): {  any[][]; formulas: any[][] } {
+export function computeFormulas(inputData: any[][], nElements: number, smrUnikData: any[][], tmzUnikData: any[][]): { data: any[][]; formulas: any[][] } {
+  const data = inputData;
   const smrDict: Map<number, { price: number; volume: number }> = new Map();
   const tmzDict: Map<number, { price: number; volume: number }> = new Map();
 
@@ -277,7 +279,7 @@ export function computeFormulas( any[][], nElements: number, smrUnikData: any[][
   return { data, formulas };
 }
 
-export function processSMRUnik(smrData: any[][], svodData: any[][]): {  any[][]; formulas: any[][] } {
+export function processSMRUnik(smrData: any[][], svodData: any[][]): { data: any[][]; formulas: any[][] } {
   const nElements = smrData.length - 1;
 
   for (let i = 0; i < smrData.length; i++) {
@@ -331,10 +333,10 @@ export function processSMRUnik(smrData: any[][], svodData: any[][]): {  any[][];
   smrData[totalRow][5] = Math.round(totalSMR * 100) / 100;
   smrData[totalRow][1] = 'ИТОГО';
 
-  return {  smrData, formulas };
+  return { data: smrData, formulas };
 }
 
-export function processTMZUnik(tmzData: any[][], svodData: any[][]): {  any[][]; formulas: any[][] } {
+export function processTMZUnik(tmzData: any[][], svodData: any[][]): { data: any[][]; formulas: any[][] } {
   const nElements = tmzData.length - 1;
 
   for (let i = 0; i < tmzData.length; i++) {
@@ -388,10 +390,10 @@ export function processTMZUnik(tmzData: any[][], svodData: any[][]): {  any[][];
   tmzData[totalRow][5] = Math.round(totalTMZ * 100) / 100;
   tmzData[totalRow][1] = 'ИТОГО';
 
-  return {  tmzData, formulas };
+  return { data: tmzData, formulas };
 }
 
-export function getRowType( any[][], rowIndex: number): string {
+export function getRowType(data: any[][], rowIndex: number): string {
   if (rowIndex === 0) return 'header';
   return data[rowIndex]?.[10] || '';
 }
@@ -425,7 +427,7 @@ export function getRowStyle(type: string, colIndex?: number): string {
   return baseStyles[type] || 'bg-white';
 }
 
-export function getSheet1CRowStyle( any[][], rowIndex: number): string {
+export function getSheet1CRowStyle(data: any[][], rowIndex: number): string {
   if (rowIndex === 0) return 'header';
   const rowTypes = (data as any)._rowTypes;
   if (!rowTypes) return '';
@@ -448,7 +450,7 @@ export function getSheet1CRowStyle( any[][], rowIndex: number): string {
 }
 
 // Применение стилей к листу Свод
-function applySvodStyles(ws: XLSX.WorkSheet,  any[][]) {
+function applySvodStyles(ws: XLSX.WorkSheet, data: any[][]) {
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
   
   for (let R = range.s.r; R <= range.e.r; R++) {
@@ -659,7 +661,7 @@ export function processWorkbookWith1C(file: ArrayBuffer, addSheet1C: boolean): {
     let smrData = XLSX.utils.sheet_to_json<any[]>(smrSheet, { header: 1, defval: null });
     let tmzData = XLSX.utils.sheet_to_json<any[]>(tmzSheet, { header: 1, defval: null });
 
-    const {  numberedData, nElements } = performNumbering(svodData);
+    const { data: numberedData, nElements } = performNumbering(svodData);
     logs.push({ step: 'Нумерация', status: 'success', message: `Обработано ${nElements} строк` });
 
     const formulaResult = computeFormulas(numberedData, nElements, smrData, tmzData);
@@ -762,9 +764,9 @@ export function processWorkbookWith1C(file: ArrayBuffer, addSheet1C: boolean): {
     XLSX.utils.book_append_sheet(newWb, tmzWs, 'ТМЦ уник');
 
     const sheets: SheetData[] = [
-      { name: 'Свод',  svodData, formulas: svodFormulas },
-      { name: 'СМР уник',  smrData, formulas: smrFormulas },
-      { name: 'ТМЦ уник',  tmzData, formulas: tmzFormulas },
+      { name: 'Свод', data: svodData, formulas: svodFormulas },
+      { name: 'СМР уник', data: smrData, formulas: smrFormulas },
+      { name: 'ТМЦ уник', data: tmzData, formulas: tmzFormulas },
     ];
 
     if (addSheet1C) {
