@@ -286,7 +286,11 @@ export function processSMRUnik(smrData: any[][], svodData: any[][]): { data: any
     while (smrData[i].length < 15) smrData[i].push(null);
   }
 
-  smrData[0][12] = 'Объем СМР из Свод';
+  // Устанавливаем заголовки для всех колонок
+  smrData[0][8] = 'Цена СМР\nмедиана';
+  smrData[0][9] = 'Цена СМР\nсредняя';
+  smrData[0][10] = 'Резервный\nстолбец';
+  smrData[0][12] = 'Объем СМР\nиз Свод';
   smrData[0][13] = 'Проверка';
 
   const formulas: any[][] = smrData.map(row => new Array(row.length).fill(null));
@@ -343,7 +347,12 @@ export function processTMZUnik(tmzData: any[][], svodData: any[][]): { data: any
     while (tmzData[i].length < 14) tmzData[i].push(null);
   }
 
-  tmzData[0][11] = 'Объем ТМЦ из Свод';
+  // Устанавливаем заголовки для всех колонок
+  tmzData[0][6] = 'ИД.Поставщика';
+  tmzData[0][7] = 'Имя.Поставщика';
+  tmzData[0][8] = 'Номинация';
+  tmzData[0][9] = 'Резервный\nстолбец';
+  tmzData[0][11] = 'Объем ТМЦ\nиз Свод';
   tmzData[0][12] = 'Проверка';
 
   const formulas: any[][] = tmzData.map(row => new Array(row.length).fill(null));
