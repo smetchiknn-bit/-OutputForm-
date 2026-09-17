@@ -453,8 +453,9 @@ export function getSheet1CRowStyle(data: any[][], rowIndex: number): string {
 function applySvodStyles(ws: XLSX.WorkSheet, data: any[][]) {
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
   
+  // Обрабатываем все 19 колонок (A-S)
   for (let R = range.s.r; R <= range.e.r; R++) {
-    for (let C = range.s.c; C <= Math.min(range.e.c, 9); C++) {
+    for (let C = range.s.c; C <= Math.min(range.e.c, 18); C++) {
       const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
       
       // Создаём ячейку если её нет (для применения заливки к пустым ячейкам)
@@ -482,46 +483,48 @@ function applySvodStyles(ws: XLSX.WorkSheet, data: any[][]) {
       } else {
         const type = data[R]?.[10];
         
-        // Цвета по типу строки
-        switch (type) {
-          case 'О':
-            style.fill = { fgColor: { rgb: 'FFF2CB' } }; // Кремовый
-            // Курсив для B-J
-            if (C > 0) {
-              style.font.italic = true;
-            }
-            break;
-          case 'К':
-          case 'С':
-          case 'У':
-          case 'Э':
-            style.fill = { fgColor: { rgb: 'D9E2F3' } }; // Светло-голубой
-            // Курсив для B-J
-            if (C > 0) {
-              style.font.italic = true;
-            }
-            break;
-          case 'Л1':
-          case 'Л2':
-          case 'Л3':
-            style.fill = { fgColor: { rgb: 'F2F2F2' } }; // Очень светло-серый
-            // Курсив для B-J
-            if (C > 0) {
-              style.font.italic = true;
-            }
-            break;
-          case 'ГР':
-            style.fill = { fgColor: { rgb: 'FFD965' } }; // Светло-золотистый
-            style.font.bold = true; // Полужирный для всех колонок
-            break;
-          case 'КЕР':
-            style.fill = { fgColor: { rgb: 'FFFFFF' } }; // Белый
-            // Обычный шрифт для всех колонок
-            break;
-          case 'ТМЦ':
-            style.fill = { fgColor: { rgb: 'E2EFD9' } }; // Светло-зеленый
-            // Обычный шрифт для всех колонок
-            break;
+        // Цвета по типу строки (только для колонок A-J)
+        if (C <= 9) {
+          switch (type) {
+            case 'О':
+              style.fill = { fgColor: { rgb: 'FFF2CB' } }; // Кремовый
+              // Курсив для B-J
+              if (C > 0) {
+                style.font.italic = true;
+              }
+              break;
+            case 'К':
+            case 'С':
+            case 'У':
+            case 'Э':
+              style.fill = { fgColor: { rgb: 'D9E2F3' } }; // Светло-голубой
+              // Курсив для B-J
+              if (C > 0) {
+                style.font.italic = true;
+              }
+              break;
+            case 'Л1':
+            case 'Л2':
+            case 'Л3':
+              style.fill = { fgColor: { rgb: 'F2F2F2' } }; // Очень светло-серый
+              // Курсив для B-J
+              if (C > 0) {
+                style.font.italic = true;
+              }
+              break;
+            case 'ГР':
+              style.fill = { fgColor: { rgb: 'FFD965' } }; // Светло-золотистый
+              style.font.bold = true; // Полужирный для всех колонок
+              break;
+            case 'КЕР':
+              style.fill = { fgColor: { rgb: 'FFFFFF' } }; // Белый
+              // Обычный шрифт для всех колонок
+              break;
+            case 'ТМЦ':
+              style.fill = { fgColor: { rgb: 'E2EFD9' } }; // Светло-зеленый
+              // Обычный шрифт для всех колонок
+              break;
+          }
         }
         
         // Выравнивание по колонкам
@@ -541,8 +544,8 @@ function applySvodStyles(ws: XLSX.WorkSheet, data: any[][]) {
     }
   }
   
-  // Обновляем диапазон листа после добавления ячеек
-  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: data.length - 1, c: 9 } });
+  // Обновляем диапазон листа после добавления ячеек (все 19 колонок A-S)
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: data.length - 1, c: 18 } });
 }
 
 // Применение стилей к листу СМР уник
