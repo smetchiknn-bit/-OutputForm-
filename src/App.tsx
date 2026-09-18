@@ -14,6 +14,30 @@ export default function App() {
   // История стабильных версий
   const versionHistory = [
     {
+      version: "1.1.0",
+      date: "2026-09-18",
+      changes: [
+        "Новый фирменный стиль (светло-зелёная палитра #f0fdf4)",
+        "Шрифт Inter и JetBrains Mono",
+        "Плавающие математические символы Σ, ₽, =",
+        "Заголовок по центру: ВЫХОДНАЯ ФОРМА",
+        "Логотип XLSX в шапке (слева и справа)",
+        "Логотип Стикер в зоне загрузки (без тени, 50% размера)",
+        "История стабильных версий в футере",
+        "Обработка нулевых цен для ТМЦ",
+        "Формат полной точности для колонок C:E",
+        "Форматирование целых чисел (макрос Форматирование_Целых_Чисел)",
+        "Формулы для КЕР обёрнуты в ЕСЛИОШИБКА",
+        "Формат стоимости КЕР в русской локали",
+        "Все 19 колонок (A-S) выводятся в Excel-файл",
+        "Заливка пустых ячеек по типам строк",
+        "Группировка служебных колонок (скрыты в Excel)",
+        "Заголовки листов СМР уник и ТМЦ уник обновлены",
+        "Формулы в колонке F для СМР уник и ТМЦ уник",
+        "Итоговые суммы в последних строках"
+      ]
+    },
+    {
       version: "1.0.0",
       date: "2024-01-15",
       changes: [
@@ -133,7 +157,7 @@ export default function App() {
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-xl p-12 border-2 border-dashed border-[#86efac] hover:border-[#16a34a] transition-colors" style={{ boxShadow: 'var(--shadow-hard)' }}>
               <div className="text-center">
-                <img src="/logoStiker.png" alt="Стикер" className="mx-auto mb-6 max-w-[50%] h-auto" />
+                <img src="/logoStiker.png" alt="Стикер" className="w-24 h-24 mx-auto mb-6 rounded-xl" style={{ boxShadow: 'var(--shadow-hard-green)' }} />
                 <h2 className="text-2xl font-bold text-[#14532d] mb-2">
                   Перетащите репорт Стикер 2.0 сюда
                 </h2>
@@ -319,7 +343,7 @@ export default function App() {
             onClick={() => setShowVersionHistory(true)}
             className="text-xs text-[#14532d]/40 hover:text-[#16a34a] transition-colors underline"
           >
-            Версия 1.0.0 от 15.01.2024
+            Версия 1.1.0 от 18.09.2026
           </button>
         </div>
       </footer>
