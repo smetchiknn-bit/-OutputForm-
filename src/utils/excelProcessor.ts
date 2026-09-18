@@ -425,18 +425,18 @@ export function getRowType(data: any[][], rowIndex: number): string {
 
 export function getRowStyle(type: string, colIndex?: number): string {
   const baseStyles: { [key: string]: string } = {
-    'О': 'bg-[#FFF2CB]',
-    'К': 'bg-[#D9E2F3]',
+    'О': 'bg-[#FFF2CB]', // Кремовый
+    'К': 'bg-[#D9E2F3]', // Светло-голубой
     'С': 'bg-[#D9E2F3]',
     'У': 'bg-[#D9E2F3]',
     'Э': 'bg-[#D9E2F3]',
-    'Л1': 'bg-[#F2F2F2]',
+    'Л1': 'bg-[#F2F2F2]', // Очень светло-серый
     'Л2': 'bg-[#F2F2F2]',
     'Л3': 'bg-[#F2F2F2]',
-    'ГР': 'bg-[#FFD965] font-bold',
-    'КЕР': 'bg-white',
-    'ТМЦ': 'bg-[#E2EFD9]',
-    'header': 'bg-[#D8D8D8]',
+    'ГР': 'bg-[#FFD965] font-bold', // Золотистый
+    'КЕР': 'bg-white', // Белый
+    'ТМЦ': 'bg-[#E2EFD9]', // Светло-зеленый
+    'header': 'bg-[#dcfce7]', // Светло-зеленый (новая палитра)
   };
 
   if (colIndex !== undefined && colIndex > 9) {
