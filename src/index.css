@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: #f0fdf4;
+  --color-grid: rgba(22, 163, 74, 0.08);
+  --color-green-dark: #14532d;
+  --color-green-primary: #16a34a;
+  --color-green-accent: #166534;
+  --color-green-light: #dcfce7;
+  --color-border: #86efac;
+  --color-text-muted: #14532d;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --shadow-hard: 8px 8px 0px rgba(20, 83, 45, 0.2);
+  --shadow-hard-green: 8px 8px 0px rgba(22, 163, 74, 0.3);
+}
+
+* {
+  font-family: var(--font-body);
+}
+
+body {
+  background-color: var(--color-bg);
+  background-image:
+    linear-gradient(var(--color-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  min-height: 100vh;
+  margin: 0;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 60%;
+  height: 60%;
+  background: radial-gradient(ellipse at top right, rgba(22, 163, 74, 0.15), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 50%;
+  height: 50%;
+  background: radial-gradient(ellipse at bottom left, rgba(22, 163, 74, 0.1), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* Плавающие математические символы */
+.floating-symbol {
+  position: fixed;
+  font-size: 4rem;
+  font-weight: bold;
+  color: rgba(22, 163, 74, 0.08);
+  pointer-events: none;
+  z-index: 0;
+  animation: float 15s ease-in-out infinite;
+}
+
+.floating-symbol:nth-child(1) {
+  top: 10%;
+  left: 15%;
+  animation-delay: 0s;
+}
+
+.floating-symbol:nth-child(2) {
+  top: 60%;
+  right: 20%;
+  animation-delay: 5s;
+}
+
+.floating-symbol:nth-child(3) {
+  bottom: 20%;
+  left: 25%;
+  animation-delay: 10s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-30px) rotate(5deg);
+  }
+}
