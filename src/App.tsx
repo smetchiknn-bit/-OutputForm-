@@ -37,13 +37,13 @@ export default function App() {
     reader.onload = (e) => {
       const arrayBuffer = e.target?.result as ArrayBuffer;
       setPendingFile(arrayBuffer);
-
+      
       // Сначала обрабатываем без листа 1С
       const { result: res, logs: lgs } = processWorkbookWith1C(arrayBuffer, false);
       setResult(res);
       setLogs(lgs);
       setActiveSheet(0);
-
+      
       // Показываем диалог о добавлении листа 1С
       // setShowDialog1C(true); // Временно отключено
     };
@@ -91,19 +91,15 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-[#16a34a] rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ boxShadow: 'var(--shadow-hard)' }}>
-                СТИКЕР
-              </div>
+              <img src="/logoStiker.png" alt="Стикер" className="w-12 h-12 rounded-lg" style={{ boxShadow: 'var(--shadow-hard)' }} />
               <div>
                 <h1 className="text-2xl font-bold text-black">Выходная форма</h1>
                 <p className="text-sm text-black/80">обработка репорт Стикер 2.0 · нумерация · формулы</p>
               </div>
             </div>
-            <div className="w-12 h-12 bg-[#16a34a] rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ boxShadow: 'var(--shadow-hard)' }}>
-              XLSX
-            </div>
+            <img src="/logoXLSX.png" alt="Excel" className="w-12 h-12 rounded-lg" style={{ boxShadow: 'var(--shadow-hard)' }} />
           </div>
-
+          
           {fileName && (
             <div className="mt-4 flex items-center justify-between bg-white/50 rounded-lg px-4 py-2">
               <span className="font-mono text-sm text-black">{fileName}</span>
@@ -114,9 +110,7 @@ export default function App() {
                     className="flex items-center gap-2 bg-[#16a34a] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#14532d] transition-colors"
                     style={{ boxShadow: 'var(--shadow-hard)' }}
                   >
-                    <div className="w-5 h-5 bg-white rounded flex items-center justify-center text-[#16a34a] font-bold text-xs">
-                      X
-                    </div>
+                    <img src="/logoXLSX.png" alt="Excel" className="w-5 h-5" />
                     <span>Скачать</span>
                   </button>
                 )}
@@ -232,17 +226,17 @@ export default function App() {
                       const type = activeSheet === 0 ? getRowType(result.sheets[0].data, rowIdx + 1) : '';
                       // Для листа Свод показываем только первые 10 колонок (A-J)
                       const numCols = activeSheet === 0 ? 10 : row.length;
-
+                      
                       return (
                         <tr key={rowIdx} className={activeSheet === 0 ? getRowStyle(type) : 'hover:bg-[#f0fdf4]'}>
                           {Array.from({ length: numCols }, (_, colIdx) => {
                             const cell = row[colIdx];
                             let cellStyle = '';
-
+                            
                             if (activeSheet === 0) {
                               cellStyle = getRowStyle(type, colIdx);
                             }
-
+                            
                             return (
                               <td
                                 key={colIdx}
@@ -267,9 +261,7 @@ export default function App() {
                 className="bg-[#16a34a] hover:bg-[#14532d] text-white px-12 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 flex items-center gap-3"
                 style={{ boxShadow: 'var(--shadow-hard-green)' }}
               >
-                <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-[#16a34a] font-bold text-sm">
-                  X
-                </div>
+                <img src="/logoXLSX.png" alt="Excel" className="w-8 h-8" />
                 <span>Скачать Excel</span>
               </button>
             </div>
@@ -314,9 +306,7 @@ export default function App() {
           style={{ boxShadow: 'var(--shadow-hard-green)' }}
           title="Скачать Excel файл"
         >
-          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#16a34a] font-bold text-sm">
-            X
-          </div>
+          <img src="/logoXLSX.png" alt="Excel" className="w-8 h-8" />
           <span className="hidden sm:inline">Скачать</span>
         </button>
       )}
