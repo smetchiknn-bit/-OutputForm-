@@ -37,13 +37,13 @@ export default function App() {
     reader.onload = (e) => {
       const arrayBuffer = e.target?.result as ArrayBuffer;
       setPendingFile(arrayBuffer);
-      
+
       // Сначала обрабатываем без листа 1С
       const { result: res, logs: lgs } = processWorkbookWith1C(arrayBuffer, false);
       setResult(res);
       setLogs(lgs);
       setActiveSheet(0);
-      
+
       // Показываем диалог о добавлении листа 1С
       // setShowDialog1C(true); // Временно отключено
     };
@@ -99,7 +99,7 @@ export default function App() {
             </div>
             <img src="/logoXLSX.png" alt="Excel" className="w-12 h-12 rounded-lg" style={{ boxShadow: 'var(--shadow-hard)' }} />
           </div>
-          
+
           {fileName && (
             <div className="mt-4 flex items-center justify-between bg-white/50 rounded-lg px-4 py-2">
               <span className="font-mono text-sm text-black">{fileName}</span>
@@ -226,17 +226,17 @@ export default function App() {
                       const type = activeSheet === 0 ? getRowType(result.sheets[0].data, rowIdx + 1) : '';
                       // Для листа Свод показываем только первые 10 колонок (A-J)
                       const numCols = activeSheet === 0 ? 10 : row.length;
-                      
+
                       return (
                         <tr key={rowIdx} className={activeSheet === 0 ? getRowStyle(type) : 'hover:bg-[#f0fdf4]'}>
                           {Array.from({ length: numCols }, (_, colIdx) => {
                             const cell = row[colIdx];
                             let cellStyle = '';
-                            
+
                             if (activeSheet === 0) {
                               cellStyle = getRowStyle(type, colIdx);
                             }
-                            
+
                             return (
                               <td
                                 key={colIdx}
