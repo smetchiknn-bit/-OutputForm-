@@ -182,11 +182,18 @@ export default function App() {
                 <table className="w-full text-sm">
                   <thead className="bg-slate-100 sticky top-0">
                     <tr>
-                      {result.sheets?.[activeSheet]?.data[0]?.map((cell: any, colIdx: number) => (
-                        <th key={colIdx} className="px-3 py-2 text-left font-semibold text-slate-700 border-b border-slate-300 whitespace-pre-line">
-                          {cell || ''}
-                        </th>
-                      ))}
+                      {(() => {
+                        // Для листа Свод показываем только первые 10 колонок (A-J)
+                        const numCols = activeSheet === 0 ? 10 : (result.sheets?.[activeSheet]?.data[0]?.length || 0);
+                        return Array.from({ length: numCols }, (_, colIdx) => {
+                          const cell = result.sheets?.[activeSheet]?.data[0]?.[colIdx];
+                          return (
+                            <th key={colIdx} className="px-3 py-2 text-left font-semibold text-slate-700 border-b border-slate-300 whitespace-pre-line">
+                              {cell || ''}
+                            </th>
+                          );
+                        });
+                      })()}
                     </tr>
                   </thead>
                   <tbody>
