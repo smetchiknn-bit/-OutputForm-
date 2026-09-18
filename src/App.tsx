@@ -89,15 +89,15 @@ export default function App() {
       {/* Header */}
       <header className="bg-[#f0fdf4] text-black shadow-lg" style={{ boxShadow: 'var(--shadow-hard-green)' }}>
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <img src="/logoXLSX.png" alt="Excel" className="w-20 h-20 rounded-xl" style={{ boxShadow: 'var(--shadow-hard)' }} />
-              <div>
-                <h1 className="text-2xl font-bold text-black">Выходная форма</h1>
-                <p className="text-sm text-black/80">обработка репорт Стикер 2.0 · нумерация · формулы</p>
-              </div>
-            </div>
+          <div className="flex items-center">
             <img src="/logoXLSX.png" alt="Excel" className="w-20 h-20 rounded-xl" style={{ boxShadow: 'var(--shadow-hard)' }} />
+            <div className="flex-1 text-center">
+              <h1 className="text-2xl font-bold text-black uppercase">Выходная форма</h1>
+              <p className="text-sm text-black/80">обработка репорт Стикер 2.0 · нумерация · формулы</p>
+            </div>
+            <div className="w-12 h-12 bg-[#16a34a] rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ boxShadow: 'var(--shadow-hard)' }}>
+              XLSX
+            </div>
           </div>
           
           {fileName && (
@@ -110,7 +110,9 @@ export default function App() {
                     className="flex items-center gap-2 bg-[#16a34a] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#14532d] transition-colors"
                     style={{ boxShadow: 'var(--shadow-hard)' }}
                   >
-                    <img src="/logoXLSX.png" alt="Excel" className="w-5 h-5" />
+                    <div className="w-5 h-5 bg-white rounded flex items-center justify-center text-[#16a34a] font-bold text-xs">
+                      X
+                    </div>
                     <span>Скачать</span>
                   </button>
                 )}
@@ -133,7 +135,7 @@ export default function App() {
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-xl p-12 border-2 border-dashed border-[#86efac] hover:border-[#16a34a] transition-colors" style={{ boxShadow: 'var(--shadow-hard)' }}>
               <div className="text-center">
-                <img src="/logoStiker.png" alt="Стикер" className="mx-auto mb-6 max-w-full h-auto" style={{ boxShadow: 'var(--shadow-hard-green)' }} />
+                <img src="/logoStiker.png" alt="Стикер" className="mx-auto mb-6 max-w-[200px] h-auto" />
                 <h2 className="text-2xl font-bold text-[#14532d] mb-2">
                   Перетащите репорт Стикер 2.0 сюда
                 </h2>
@@ -257,7 +259,9 @@ export default function App() {
                 className="bg-[#16a34a] hover:bg-[#14532d] text-white px-12 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 flex items-center gap-3"
                 style={{ boxShadow: 'var(--shadow-hard-green)' }}
               >
-                <img src="/logoXLSX.png" alt="Excel" className="w-8 h-8" />
+                <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-[#16a34a] font-bold text-sm">
+                  X
+                </div>
                 <span>Скачать Excel</span>
               </button>
             </div>
@@ -302,7 +306,9 @@ export default function App() {
           style={{ boxShadow: 'var(--shadow-hard-green)' }}
           title="Скачать Excel файл"
         >
-          <img src="/logoXLSX.png" alt="Excel" className="w-8 h-8" />
+          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#16a34a] font-bold text-sm">
+            X
+          </div>
           <span className="hidden sm:inline">Скачать</span>
         </button>
       )}
