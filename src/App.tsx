@@ -87,27 +87,27 @@ export default function App() {
       <div className="floating-symbol">=</div>
 
       {/* Header */}
-      <header className="bg-gradient-to-r from-[#14532d] to-[#16a34a] text-white shadow-lg" style={{ boxShadow: 'var(--shadow-hard-green)' }}>
+      <header className="bg-[#f0fdf4] text-black shadow-lg" style={{ boxShadow: 'var(--shadow-hard-green)' }}>
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img src="/logoStiker.png" alt="Стикер" className="w-12 h-12 rounded-lg" style={{ boxShadow: 'var(--shadow-hard)' }} />
               <div>
-                <h1 className="text-2xl font-bold">Выходная форма</h1>
-                <p className="text-sm text-white/80">обработка репорт Стикер 2.0 · нумерация · формулы · лист 1С</p>
+                <h1 className="text-2xl font-bold text-black">Выходная форма</h1>
+                <p className="text-sm text-black/80">обработка репорт Стикер 2.0 · нумерация · формулы · лист 1С</p>
               </div>
             </div>
             <img src="/logoXLSX.png" alt="Excel" className="w-12 h-12 rounded-lg" style={{ boxShadow: 'var(--shadow-hard)' }} />
           </div>
           
           {fileName && (
-            <div className="mt-4 flex items-center justify-between bg-white/10 rounded-lg px-4 py-2">
-              <span className="font-mono text-sm">{fileName}</span>
+            <div className="mt-4 flex items-center justify-between bg-white/50 rounded-lg px-4 py-2">
+              <span className="font-mono text-sm text-black">{fileName}</span>
               <div className="flex items-center gap-3">
                 {result && (
                   <button
                     onClick={handleExport}
-                    className="flex items-center gap-2 bg-white text-[#16a34a] px-4 py-2 rounded-lg font-semibold hover:bg-slate-100 transition-colors"
+                    className="flex items-center gap-2 bg-[#16a34a] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#14532d] transition-colors"
                     style={{ boxShadow: 'var(--shadow-hard)' }}
                   >
                     <img src="/logoXLSX.png" alt="Excel" className="w-5 h-5" />
@@ -116,7 +116,7 @@ export default function App() {
                 )}
                 <button
                   onClick={handleReset}
-                  className="text-sm hover:text-red-300 transition-colors"
+                  className="text-sm text-black hover:text-red-600 transition-colors"
                 >
                   Сброс
                 </button>
