@@ -6,10 +6,12 @@ export default function App() {
   const [logs, setLogs] = useState<any[]>([]);
   const [fileName, setFileName] = useState<string>('');
   const [activeSheet, setActiveSheet] = useState<number>(0);
+  // const [showDialog1C, setShowDialog1C] = useState<boolean>(false); // Временно отключено
   const [pendingFile, setPendingFile] = useState<ArrayBuffer | null>(null);
   const [showVersionHistory, setShowVersionHistory] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // История стабильных версий
   const versionHistory = [
     {
       version: "1.0.0",
@@ -36,13 +38,28 @@ export default function App() {
       const arrayBuffer = e.target?.result as ArrayBuffer;
       setPendingFile(arrayBuffer);
       
+      // Сначала обрабатываем без листа 1С
       const { result: res, logs: lgs } = processWorkbookWith1C(arrayBuffer, false);
       setResult(res);
       setLogs(lgs);
       setActiveSheet(0);
+      
+      // Показываем диалог о добавлении листа 1С
+      // setShowDialog1C(true); // Временно отключено
     };
     reader.readAsArrayBuffer(file);
   };
+
+  // Временно отключено - создание листа 1С
+  // const handleAddSheet1C = (add: boolean) => {
+  //   if (add && pendingFile) {
+  //     // Переобрабатываем с листом 1С
+  //     const { result: res, logs: lgs } = processWorkbookWith1C(pendingFile, true);
+  //     setResult(res);
+  //     setLogs(lgs);
+  //   }
+  //   setShowDialog1C(false);
+  // };
 
   const handleExport = () => {
     if (result?.workbook) {
@@ -55,6 +72,7 @@ export default function App() {
     setLogs([]);
     setFileName('');
     setActiveSheet(0);
+    // setShowDialog1C(false); // Временно отключено
     setPendingFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -63,21 +81,27 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
+      {/* Плавающие математические символы */}
       <div className="floating-symbol">Σ</div>
       <div className="floating-symbol">₽</div>
       <div className="floating-symbol">=</div>
 
+      {/* Header */}
       <header className="bg-[#f0fdf4] text-black shadow-lg" style={{ boxShadow: 'var(--shadow-hard-green)' }}>
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <img src="/logoStiker.png" alt="Стикер" className="w-12 h-12 rounded-lg" style={{ boxShadow: 'var(--shadow-hard)' }} />
+            <div className="flex items-center gap-6">
+              <div className="w-20 h-20 bg-[#16a34a] rounded-xl flex items-center justify-center text-white font-bold text-sm p-2" style={{ boxShadow: 'var(--shadow-hard)' }}>
+                СТИКЕР
+              </div>
               <div>
                 <h1 className="text-2xl font-bold text-black">Выходная форма</h1>
                 <p className="text-sm text-black/80">обработка репорт Стикер 2.0 · нумерация · формулы</p>
               </div>
             </div>
-            <img src="/logoXLSX.png" alt="Excel" className="w-12 h-12 rounded-lg" style={{ boxShadow: 'var(--shadow-hard)' }} />
+            <div className="w-12 h-12 bg-[#16a34a] rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ boxShadow: 'var(--shadow-hard)' }}>
+              XLSX
+            </div>
           </div>
           
           {fileName && (
@@ -90,7 +114,9 @@ export default function App() {
                     className="flex items-center gap-2 bg-[#16a34a] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#14532d] transition-colors"
                     style={{ boxShadow: 'var(--shadow-hard)' }}
                   >
-                    <img src="/logoXLSX.png" alt="Excel" className="w-5 h-5" />
+                    <div className="w-5 h-5 bg-white rounded flex items-center justify-center text-[#16a34a] font-bold text-xs">
+                      X
+                    </div>
                     <span>Скачать</span>
                   </button>
                 )}
@@ -106,8 +132,10 @@ export default function App() {
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         {!result ? (
+          // Drop Zone
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-xl p-12 border-2 border-dashed border-[#86efac] hover:border-[#16a34a] transition-colors" style={{ boxShadow: 'var(--shadow-hard)' }}>
               <div className="text-center">
@@ -141,7 +169,9 @@ export default function App() {
             </div>
           </div>
         ) : (
+          // Results
           <div className="space-y-6">
+            {/* Logs */}
             <div className="bg-white rounded-xl p-6" style={{ boxShadow: 'var(--shadow-hard)' }}>
               <h2 className="text-lg font-bold text-[#14532d] mb-4">Журнал обработки</h2>
               <div className="space-y-2">
@@ -158,6 +188,7 @@ export default function App() {
               </div>
             </div>
 
+            {/* Sheet Tabs */}
             <div className="bg-white rounded-xl overflow-hidden" style={{ boxShadow: 'var(--shadow-hard)' }}>
               <div className="border-b border-[#86efac]">
                 <div className="flex overflow-x-auto">
@@ -177,11 +208,13 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Table */}
               <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-[#dcfce7] sticky top-0">
                     <tr>
                       {(() => {
+                        // Для листа Свод показываем только первые 10 колонок (A-J)
                         const numCols = activeSheet === 0 ? 10 : (result.sheets?.[activeSheet]?.data[0]?.length || 0);
                         return Array.from({ length: numCols }, (_, colIdx) => {
                           const cell = result.sheets?.[activeSheet]?.data[0]?.[colIdx];
@@ -197,6 +230,7 @@ export default function App() {
                   <tbody>
                     {result.sheets?.[activeSheet]?.data.slice(1).map((row: any[], rowIdx: number) => {
                       const type = activeSheet === 0 ? getRowType(result.sheets[0].data, rowIdx + 1) : '';
+                      // Для листа Свод показываем только первые 10 колонок (A-J)
                       const numCols = activeSheet === 0 ? 10 : row.length;
                       
                       return (
@@ -226,13 +260,16 @@ export default function App() {
               </div>
             </div>
 
+            {/* Export Button */}
             <div className="flex justify-center gap-4">
               <button
                 onClick={handleExport}
                 className="bg-[#16a34a] hover:bg-[#14532d] text-white px-12 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 flex items-center gap-3"
                 style={{ boxShadow: 'var(--shadow-hard-green)' }}
               >
-                <img src="/logoXLSX.png" alt="Excel" className="w-8 h-8" />
+                <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-[#16a34a] font-bold text-sm">
+                  X
+                </div>
                 <span>Скачать Excel</span>
               </button>
             </div>
@@ -240,6 +277,36 @@ export default function App() {
         )}
       </main>
 
+      {/* Dialog 1C - Временно отключено */}
+      {/* {showDialog1C && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md">
+            <div className="flex items-center gap-4 mb-6">
+              <img src="/logo1C.png" alt="1С" className="w-12 h-12" />
+              <h3 className="text-xl font-bold text-slate-800">Добавить лист «1С»?</h3>
+            </div>
+            <p className="text-slate-600 mb-6">
+              Основной файл обработан. Хотите добавить дополнительный лист «1С» с форматированием для выгрузки в 1С?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleAddSheet1C(true)}
+                className="flex-1 bg-[#1e7145] hover:bg-[#123f28] text-white px-4 py-2 rounded-lg font-semibold shadow-md transition-colors"
+              >
+                Да, добавить
+              </button>
+              <button
+                onClick={() => handleAddSheet1C(false)}
+                className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-semibold transition-colors"
+              >
+                Нет, пропустить
+              </button>
+            </div>
+          </div>
+        </div>
+      )} */}
+
+      {/* Floating Download Button */}
       {result && (
         <button
           onClick={handleExport}
@@ -247,11 +314,14 @@ export default function App() {
           style={{ boxShadow: 'var(--shadow-hard-green)' }}
           title="Скачать Excel файл"
         >
-          <img src="/logoXLSX.png" alt="Excel" className="w-8 h-8" />
+          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#16a34a] font-bold text-sm">
+            X
+          </div>
           <span className="hidden sm:inline">Скачать</span>
         </button>
       )}
 
+      {/* Footer */}
       <footer className="mt-12 py-6 text-center text-sm text-[#14532d]/60">
         <div className="max-w-7xl mx-auto px-4">
           <p className="mb-2">Выходная форма — обработка репорт Стикер 2.0 · нумерация · формулы</p>
@@ -264,6 +334,7 @@ export default function App() {
         </div>
       </footer>
 
+      {/* Модальное окно истории версий */}
       {showVersionHistory && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden" style={{ boxShadow: 'var(--shadow-hard-green)' }}>
