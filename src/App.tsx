@@ -94,7 +94,7 @@ export default function App() {
               <img src="/logoStiker.png" alt="Стикер" className="w-12 h-12 rounded-lg" style={{ boxShadow: 'var(--shadow-hard)' }} />
               <div>
                 <h1 className="text-2xl font-bold text-black">Выходная форма</h1>
-                <p className="text-sm text-black/80">обработка репорт Стикер 2.0 · нумерация · формулы · лист 1С</p>
+                <p className="text-sm text-black/80">обработка репорт Стикер 2.0 · нумерация · формулы</p>
               </div>
             </div>
             <img src="/logoXLSX.png" alt="Excel" className="w-12 h-12 rounded-lg" style={{ boxShadow: 'var(--shadow-hard)' }} />
