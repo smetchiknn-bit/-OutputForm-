@@ -91,7 +91,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
-              <img src="/logoStiker.png" alt="Стикер" className="w-20 h-20 rounded-xl" style={{ boxShadow: 'var(--shadow-hard)' }} />
+              <img src="/logoXLSX.png" alt="Excel" className="w-20 h-20 rounded-xl" style={{ boxShadow: 'var(--shadow-hard)' }} />
               <div>
                 <h1 className="text-2xl font-bold text-black">Выходная форма</h1>
                 <p className="text-sm text-black/80">обработка репорт Стикер 2.0 · нумерация · формулы</p>
@@ -133,11 +133,7 @@ export default function App() {
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-xl p-12 border-2 border-dashed border-[#86efac] hover:border-[#16a34a] transition-colors" style={{ boxShadow: 'var(--shadow-hard)' }}>
               <div className="text-center">
-                <div className="w-20 h-20 mx-auto mb-6 bg-[#16a34a] rounded-full flex items-center justify-center" style={{ boxShadow: 'var(--shadow-hard-green)' }}>
-                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                </div>
+                <img src="/logoStiker.png" alt="Стикер" className="mx-auto mb-6 max-w-full h-auto" style={{ boxShadow: 'var(--shadow-hard-green)' }} />
                 <h2 className="text-2xl font-bold text-[#14532d] mb-2">
                   Перетащите репорт Стикер 2.0 сюда
                 </h2>
