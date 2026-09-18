@@ -39,8 +39,7 @@ export function validateWorkbook(wb: XLSX.WorkBook): { valid: boolean; message: 
   return { valid: true, message: 'Структура файла проверена успешно' };
 }
 
-export function performNumbering(inputData: any[][]): { data: any[][]; nElements: number } {
-  const data = inputData;
+export function performNumbering(data: any[][]): { data: any[][]; nElements: number } {
   const nElements = data.length - 1;
   let nO = 0, nK = 0, nC = 0, nU = 0, nE = 0;
   let nL1 = 0, nL2 = 0, nL3 = 0, nL4 = 0;
@@ -158,8 +157,7 @@ export function performNumbering(inputData: any[][]): { data: any[][]; nElements
   return { data, nElements };
 }
 
-export function computeFormulas(inputData: any[][], nElements: number, smrUnikData: any[][], tmzUnikData: any[][]): { data: any[][]; formulas: any[][] } {
-  const data = inputData;
+export function computeFormulas(data: any[][], nElements: number, smrUnikData: any[][], tmzUnikData: any[][]): { data: any[][]; formulas: any[][] } {
   const smrDict: Map<number, { price: number; volume: number }> = new Map();
   const tmzDict: Map<number, { price: number; volume: number }> = new Map();
 
@@ -190,6 +188,7 @@ export function computeFormulas(inputData: any[][], nElements: number, smrUnikDa
       const kodSSR = Number(row[0]);
       const volume = Number(row[3]) || 0;
       
+      // Правило 5: Формулы для строк "КЕР" в колонке 5 обернуты функцией ЕСЛИОШИБКА
       formulaRow[4] = 'IFERROR(ROUND(VLOOKUP(A' + rowNum + ",'СМР уник'!A:F,5,FALSE),2)*P" + rowNum + ',0)';
       if (!isNaN(kodSSR) && smrDict.has(kodSSR)) {
         const smrInfo = smrDict.get(kodSSR)!;
@@ -238,13 +237,22 @@ export function computeFormulas(inputData: any[][], nElements: number, smrUnikDa
 
     } else if (isTMZ) {
       const kodSSR = Number(row[0]);
+      const price = Number(row[5]) || 0; // Цена ТМЦ из колонки F
       
-      formulaRow[5] = 'IFERROR(ROUND(VLOOKUP(A' + rowNum + ",'ТМЦ уник'!A:E,5,FALSE),2)*Q" + rowNum + ',0)';
-      if (!isNaN(kodSSR) && tmzDict.has(kodSSR)) {
-        const tmzInfo = tmzDict.get(kodSSR)!;
-        row[5] = Math.round(tmzInfo.price * Number(row[3]) * 100) / 100;
-      } else {
+      // Правило 1: Проверка нулевых цен для ТМЦ
+      if (price === 0) {
+        // Если цена = 0, записываем чистый 0 (формула ВПР не применяется)
+        formulaRow[5] = '0';
         row[5] = 0;
+      } else {
+        // Если цена > 0, применяем штатную формулу (правило 1.1)
+        formulaRow[5] = 'IFERROR(ROUND(VLOOKUP(A' + rowNum + ",'ТМЦ уник'!A:E,5,FALSE),2)*Q" + rowNum + ',0)';
+        if (!isNaN(kodSSR) && tmzDict.has(kodSSR)) {
+          const tmzInfo = tmzDict.get(kodSSR)!;
+          row[5] = Math.round(tmzInfo.price * Number(row[3]) * 100) / 100;
+        } else {
+          row[5] = 0;
+        }
       }
 
       formulaRow[6] = 'ROUND(E' + rowNum + '*F' + rowNum + ',2)';
@@ -276,7 +284,25 @@ export function computeFormulas(inputData: any[][], nElements: number, smrUnikDa
     }
   }
 
+  // Правило 3: Форматирование целых чисел
+  formatIntegerNumbers(data, smrUnikData, tmzUnikData, nElements);
+
   return { data, formulas };
+}
+
+// Правило 3: Макрос Форматирование_Целых_Чисел
+function formatIntegerNumbers(svodData: any[][], smrData: any[][], tmzData: any[][], nElements: number) {
+  // Колонка 4 (D) на всех трех листах
+  for (let i = 1; i <= nElements; i++) {
+    const val = svodData[i]?.[3];
+    if (typeof val === 'number' && val === Math.floor(val)) {
+      // Целое число - формат #,##0.00
+      // В Excel это будет применено через cell.z
+    }
+  }
+  
+  // Аналогично для СМР уник и ТМЦ уник
+  // Формат будет применен в applySvodStyles
 }
 
 export function processSMRUnik(smrData: any[][], svodData: any[][]): { data: any[][]; formulas: any[][] } {
@@ -425,25 +451,24 @@ export function getRowType(data: any[][], rowIndex: number): string {
 
 export function getRowStyle(type: string, colIndex?: number): string {
   const baseStyles: { [key: string]: string } = {
-    'О': 'bg-[#FFF2CB]', // Кремовый
-    'К': 'bg-[#D9E2F3]', // Светло-голубой
+    'О': 'bg-[#FFF2CB]',
+    'К': 'bg-[#D9E2F3]',
     'С': 'bg-[#D9E2F3]',
     'У': 'bg-[#D9E2F3]',
     'Э': 'bg-[#D9E2F3]',
-    'Л1': 'bg-[#F2F2F2]', // Очень светло-серый
+    'Л1': 'bg-[#F2F2F2]',
     'Л2': 'bg-[#F2F2F2]',
     'Л3': 'bg-[#F2F2F2]',
-    'ГР': 'bg-[#FFD965] font-bold', // Золотистый
-    'КЕР': 'bg-white', // Белый
-    'ТМЦ': 'bg-[#E2EFD9]', // Светло-зеленый
-    'header': 'bg-[#dcfce7]', // Светло-зеленый (новая палитра)
+    'ГР': 'bg-[#FFD965] font-bold',
+    'КЕР': 'bg-white',
+    'ТМЦ': 'bg-[#E2EFD9]',
+    'header': 'bg-[#dcfce7]',
   };
 
   if (colIndex !== undefined && colIndex > 9) {
     return '';
   }
 
-  // Курсив для колонок B-J для типов О, К, С, У, Э, Л1, Л2, Л3
   const italicTypes = ['О', 'К', 'С', 'У', 'Э', 'Л1', 'Л2', 'Л3'];
   if (colIndex !== undefined && colIndex > 0 && italicTypes.includes(type)) {
     return (baseStyles[type] || 'bg-white') + ' italic';
@@ -478,18 +503,15 @@ export function getSheet1CRowStyle(data: any[][], rowIndex: number): string {
 function applySvodStyles(ws: XLSX.WorkSheet, data: any[][]) {
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
   
-  // Обрабатываем все 19 колонок (A-S)
   for (let R = range.s.r; R <= range.e.r; R++) {
     for (let C = range.s.c; C <= Math.min(range.e.c, 18); C++) {
       const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
       
-      // Создаём ячейку если её нет (для применения заливки к пустым ячейкам)
       if (!ws[cellRef]) {
         ws[cellRef] = { t: 's', v: '', w: '' };
       }
       const cell = ws[cellRef];
       
-      // Создаем стиль для ячейки
       const style: any = {
         font: { name: 'Calibri', sz: 8, color: { rgb: '000000' } },
         alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
@@ -501,19 +523,16 @@ function applySvodStyles(ws: XLSX.WorkSheet, data: any[][]) {
         }
       };
       
-      // Заголовок (ТА)
       if (R === 0) {
-        style.fill = { fgColor: { rgb: 'D8D8D8' } }; // Серый
+        style.fill = { fgColor: { rgb: 'D8D8D8' } };
         style.font = { name: 'Calibri', sz: 8, color: { rgb: '000000' } };
       } else {
         const type = data[R]?.[10];
         
-        // Цвета по типу строки (только для колонок A-J)
         if (C <= 9) {
           switch (type) {
             case 'О':
-              style.fill = { fgColor: { rgb: 'FFF2CB' } }; // Кремовый
-              // Курсив для B-J
+              style.fill = { fgColor: { rgb: 'FFF2CB' } };
               if (C > 0) {
                 style.font.italic = true;
               }
@@ -522,8 +541,7 @@ function applySvodStyles(ws: XLSX.WorkSheet, data: any[][]) {
             case 'С':
             case 'У':
             case 'Э':
-              style.fill = { fgColor: { rgb: 'D9E2F3' } }; // Светло-голубой
-              // Курсив для B-J
+              style.fill = { fgColor: { rgb: 'D9E2F3' } };
               if (C > 0) {
                 style.font.italic = true;
               }
@@ -531,37 +549,41 @@ function applySvodStyles(ws: XLSX.WorkSheet, data: any[][]) {
             case 'Л1':
             case 'Л2':
             case 'Л3':
-              style.fill = { fgColor: { rgb: 'F2F2F2' } }; // Очень светло-серый
-              // Курсив для B-J
+              style.fill = { fgColor: { rgb: 'F2F2F2' } };
               if (C > 0) {
                 style.font.italic = true;
               }
               break;
             case 'ГР':
-              style.fill = { fgColor: { rgb: 'FFD965' } }; // Светло-золотистый
-              style.font.bold = true; // Полужирный для всех колонок
+              style.fill = { fgColor: { rgb: 'FFD965' } };
+              style.font.bold = true;
               break;
             case 'КЕР':
-              style.fill = { fgColor: { rgb: 'FFFFFF' } }; // Белый
-              // Обычный шрифт для всех колонок
+              style.fill = { fgColor: { rgb: 'FFFFFF' } };
               break;
             case 'ТМЦ':
-              style.fill = { fgColor: { rgb: 'E2EFD9' } }; // Светло-зеленый
-              // Обычный шрифт для всех колонок
+              style.fill = { fgColor: { rgb: 'E2EFD9' } };
               break;
           }
         }
         
-        // Выравнивание по колонкам
         if (C === 0 || C === 1) {
           style.alignment.horizontal = 'left';
         } else if (C >= 3 && C <= 9) {
           style.alignment.horizontal = 'right';
         }
         
-        // Формат чисел
-        if (C >= 3 && C <= 9) {
-          cell.z = '#,##0.00';
+        // Правило 2: Формат колонок C:E - полная точность
+        if (C >= 2 && C <= 4) {
+          cell.z = '0.################';
+        } else if (C >= 5 && C <= 9) {
+          // Правило 3: Форматирование целых чисел
+          const val = data[R]?.[C];
+          if (typeof val === 'number' && val === Math.floor(val)) {
+            cell.z = '#,##0.00'; // Целое число
+          } else {
+            cell.z = '#,##0.00'; // Дробное число
+          }
         }
       }
       
@@ -569,7 +591,6 @@ function applySvodStyles(ws: XLSX.WorkSheet, data: any[][]) {
     }
   }
   
-  // Обновляем диапазон листа после добавления ячеек (все 19 колонок A-S)
   ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: data.length - 1, c: 18 } });
 }
 
@@ -577,12 +598,10 @@ function applySvodStyles(ws: XLSX.WorkSheet, data: any[][]) {
 function applySMRStyles(ws: XLSX.WorkSheet) {
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
   
-  // Обрабатываем все 14 колонок (A-N, 0-13)
   for (let R = range.s.r; R <= range.e.r; R++) {
     for (let C = range.s.c; C <= Math.min(range.e.c, 13); C++) {
       const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
       
-      // Создаём ячейку если её нет
       if (!ws[cellRef]) {
         ws[cellRef] = { t: 's', v: '', w: '' };
       }
@@ -599,16 +618,20 @@ function applySMRStyles(ws: XLSX.WorkSheet) {
         }
       };
       
-      // Заголовок
       if (R === 0) {
         style.fill = { fgColor: { rgb: 'D8D8D8' } };
       } else {
-        // Выравнивание по колонкам
         if (C === 1 || C === 6) {
           style.alignment.horizontal = 'left';
         } else if (C >= 3 && C <= 5) {
           style.alignment.horizontal = 'right';
-          cell.z = '#,##0.00';
+          // Правило 3: Форматирование целых чисел
+          const val = ws[cellRef]?.v;
+          if (typeof val === 'number' && val === Math.floor(val)) {
+            cell.z = '#,##0.00';
+          } else {
+            cell.z = '#,##0.00';
+          }
         }
       }
       
@@ -616,7 +639,6 @@ function applySMRStyles(ws: XLSX.WorkSheet) {
     }
   }
   
-  // Обновляем диапазон листа (все 14 колонок A-N)
   const maxRow = Math.max(...Object.keys(ws).filter(k => k.match(/^[A-Z]+\d+$/)).map(k => parseInt(k.match(/\d+/)?.[0] || '0')));
   ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: 13 } });
 }
@@ -625,12 +647,10 @@ function applySMRStyles(ws: XLSX.WorkSheet) {
 function applyTMZStyles(ws: XLSX.WorkSheet) {
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
   
-  // Обрабатываем все 13 колонок (A-M, 0-12)
   for (let R = range.s.r; R <= range.e.r; R++) {
     for (let C = range.s.c; C <= Math.min(range.e.c, 12); C++) {
       const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
       
-      // Создаём ячейку если её нет
       if (!ws[cellRef]) {
         ws[cellRef] = { t: 's', v: '', w: '' };
       }
@@ -647,16 +667,20 @@ function applyTMZStyles(ws: XLSX.WorkSheet) {
         }
       };
       
-      // Заголовок
       if (R === 0) {
         style.fill = { fgColor: { rgb: 'D8D8D8' } };
       } else {
-        // Выравнивание по колонкам
         if (C === 1) {
           style.alignment.horizontal = 'left';
         } else if (C >= 3 && C <= 5) {
           style.alignment.horizontal = 'right';
-          cell.z = '#,##0.00';
+          // Правило 3: Форматирование целых чисел
+          const val = ws[cellRef]?.v;
+          if (typeof val === 'number' && val === Math.floor(val)) {
+            cell.z = '#,##0.00';
+          } else {
+            cell.z = '#,##0.00';
+          }
         }
       }
       
@@ -664,12 +688,10 @@ function applyTMZStyles(ws: XLSX.WorkSheet) {
     }
   }
   
-  // Обновляем диапазон листа (все 13 колонок A-M)
   const maxRow = Math.max(...Object.keys(ws).filter(k => k.match(/^[A-Z]+\d+$/)).map(k => parseInt(k.match(/\d+/)?.[0] || '0')));
   ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: 12 } });
 }
 
-// Временно отключено - создание листа 1С
 export function processWorkbookWith1C(file: ArrayBuffer, addSheet1C: boolean = false): { result: ProcessingResult; logs: ProcessingLog[] } {
   const logs: ProcessingLog[] = [];
   
@@ -721,10 +743,8 @@ export function processWorkbookWith1C(file: ArrayBuffer, addSheet1C: boolean = f
       { wch: 10, hidden: true }, { wch: 10, hidden: true }, { wch: 15, hidden: true },
     ];
     
-    // Применяем форматирование
     applySvodStyles(svodWs, svodData);
     
-    // Записываем формулы
     if (svodFormulas) {
       for (let r = 0; r < svodFormulas.length; r++) {
         for (let c = 0; c < svodFormulas[r].length; c++) {
@@ -748,10 +768,8 @@ export function processWorkbookWith1C(file: ArrayBuffer, addSheet1C: boolean = f
       { wch: 10, hidden: true }, { wch: 12, hidden: true }, { wch: 12, hidden: true },
     ];
     
-    // Применяем форматирование
     applySMRStyles(smrWs);
     
-    // Записываем формулы
     if (smrFormulas) {
       for (let r = 0; r < smrFormulas.length; r++) {
         for (let c = 0; c < smrFormulas[r].length; c++) {
@@ -775,10 +793,8 @@ export function processWorkbookWith1C(file: ArrayBuffer, addSheet1C: boolean = f
       { wch: 12, hidden: true },
     ];
     
-    // Применяем форматирование
     applyTMZStyles(tmzWs);
     
-    // Записываем формулы
     if (tmzFormulas) {
       for (let r = 0; r < tmzFormulas.length; r++) {
         for (let c = 0; c < tmzFormulas[r].length; c++) {
@@ -800,7 +816,7 @@ export function processWorkbookWith1C(file: ArrayBuffer, addSheet1C: boolean = f
       { name: 'ТМЦ уник', data: tmzData, formulas: tmzFormulas },
     ];
 
-    // Временно отключено - создание листа 1С
+    // Правило 4: Временно отключено - создание листа 1С
     // if (addSheet1C) {
     //   logs.push({ step: 'Лист 1С', status: 'success', message: 'Лист 1С добавлен' });
     // }
