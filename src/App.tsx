@@ -157,7 +157,7 @@ export default function App() {
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-xl p-12 border-2 border-dashed border-[#86efac] hover:border-[#16a34a] transition-colors" style={{ boxShadow: 'var(--shadow-hard)' }}>
               <div className="text-center">
-                <img src="/logoStiker.png" alt="Стикер" className="w-24 h-24 mx-auto mb-6 rounded-xl" style={{ boxShadow: 'var(--shadow-hard-green)' }} />
+                <img src="/logoStiker.png" alt="Стикер" className="mx-auto mb-6 max-w-[50%] h-auto" />
                 <h2 className="text-2xl font-bold text-[#14532d] mb-2">
                   Перетащите репорт Стикер 2.0 сюда
                 </h2>
