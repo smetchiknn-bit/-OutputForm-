@@ -95,9 +95,7 @@ export default function App() {
               <h1 className="text-2xl font-bold text-black uppercase">Выходная форма</h1>
               <p className="text-sm text-black/80">обработка репорт Стикер 2.0 · нумерация · формулы</p>
             </div>
-            <div className="w-12 h-12 bg-[#16a34a] rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ boxShadow: 'var(--shadow-hard)' }}>
-              XLSX
-            </div>
+            <img src="/logoXLSX.png" alt="Excel" className="w-20 h-20 rounded-xl" style={{ boxShadow: 'var(--shadow-hard)' }} />
           </div>
           
           {fileName && (
@@ -135,7 +133,7 @@ export default function App() {
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-xl p-12 border-2 border-dashed border-[#86efac] hover:border-[#16a34a] transition-colors" style={{ boxShadow: 'var(--shadow-hard)' }}>
               <div className="text-center">
-                <img src="/logoStiker.png" alt="Стикер" className="mx-auto mb-6 max-w-[200px] h-auto" />
+                <img src="/logoStiker.png" alt="Стикер" className="w-24 h-24 mx-auto mb-6 rounded-xl" style={{ boxShadow: 'var(--shadow-hard-green)' }} />
                 <h2 className="text-2xl font-bold text-[#14532d] mb-2">
                   Перетащите репорт Стикер 2.0 сюда
                 </h2>
