@@ -14,6 +14,16 @@ export default function App() {
   // История стабильных версий
   const versionHistory = [
     {
+      version: "1.2.0",
+      date: "2026-09-18",
+      changes: [
+        "Добавлена поддержка колонки 'ИД.Бюджетная.Статья.1С'",
+        "Обратная совместимость с файлами без новой колонки",
+        "Новая колонка скрыта в Excel (как K:S)",
+        "Форматирование новой колонки аналогично K:S"
+      ]
+    },
+    {
       version: "1.1.0",
       date: "2026-09-18",
       changes: [
@@ -39,7 +49,7 @@ export default function App() {
     },
     {
       version: "1.0.0",
-      date: "2024-01-15",
+      date: "2026-08-22",
       changes: [
         "Первая стабильная версия",
         "Обработка листа Свод с 19 колонками (A-S)",
@@ -61,13 +71,13 @@ export default function App() {
     reader.onload = (e) => {
       const arrayBuffer = e.target?.result as ArrayBuffer;
       setPendingFile(arrayBuffer);
-      
+
       // Сначала обрабатываем без листа 1С
       const { result: res, logs: lgs } = processWorkbookWith1C(arrayBuffer, false);
       setResult(res);
       setLogs(lgs);
       setActiveSheet(0);
-      
+
       // Показываем диалог о добавлении листа 1С
       // setShowDialog1C(true); // Временно отключено
     };
@@ -121,7 +131,7 @@ export default function App() {
             </div>
             <img src="/logoXLSX.png" alt="Excel" className="w-20 h-20 rounded-xl" style={{ boxShadow: 'var(--shadow-hard)' }} />
           </div>
-          
+
           {fileName && (
             <div className="mt-4 flex items-center justify-between bg-white/50 rounded-lg px-4 py-2">
               <span className="font-mono text-sm text-black">{fileName}</span>
@@ -246,17 +256,17 @@ export default function App() {
                       const type = activeSheet === 0 ? getRowType(result.sheets[0].data, rowIdx + 1) : '';
                       // Для листа Свод показываем только первые 10 колонок (A-J)
                       const numCols = activeSheet === 0 ? 10 : row.length;
-                      
+
                       return (
                         <tr key={rowIdx} className={activeSheet === 0 ? getRowStyle(type) : 'hover:bg-[#f0fdf4]'}>
                           {Array.from({ length: numCols }, (_, colIdx) => {
                             const cell = row[colIdx];
                             let cellStyle = '';
-                            
+
                             if (activeSheet === 0) {
                               cellStyle = getRowStyle(type, colIdx);
                             }
-                            
+
                             return (
                               <td
                                 key={colIdx}
@@ -343,7 +353,7 @@ export default function App() {
             onClick={() => setShowVersionHistory(true)}
             className="text-xs text-[#14532d]/40 hover:text-[#16a34a] transition-colors underline"
           >
-            Версия 1.1.0 от 18.09.2026
+            Версия 1.2.0 от 18.09.2026
           </button>
         </div>
       </footer>
