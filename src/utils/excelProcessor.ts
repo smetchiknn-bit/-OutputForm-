@@ -1,410 +1,831 @@
-import { useState, useRef } from 'react';
-import { processWorkbookWith1C, exportToExcel, getRowType, getRowStyle } from './utils/excelProcessor';
+import * as XLSX from 'xlsx-js-style';
 
-export default function App() {
-  const [result, setResult] = useState<any>(null);
-  const [logs, setLogs] = useState<any[]>([]);
-  const [fileName, setFileName] = useState<string>('');
-  const [activeSheet, setActiveSheet] = useState<number>(0);
-  // const [showDialog1C, setShowDialog1C] = useState<boolean>(false); // Временно отключено
-  const [pendingFile, setPendingFile] = useState<ArrayBuffer | null>(null);
-  const [showVersionHistory, setShowVersionHistory] = useState<boolean>(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export interface SheetData {
+  name: string;
+  data: any[][];
+  formulas?: any[][];
+}
 
-  // История стабильных версий
-  const versionHistory = [
-    {
-      version: "1.1.1",
-      date: "2026-09-23",
-      changes: [
-        "Добавлена поддержка колонки 'ИД.Бюджетная.Статья.1С'",
-        "Обратная совместимость с файлами без новой колонки",
-        "Новая колонка скрыта в Excel (как K:S)",
-        "Форматирование новой колонки аналогично K:S"
-      ]
-    },
-    {
-      version: "1.1.0",
-      date: "2026-09-18",
-      changes: [
-        "Новый фирменный стиль (светло-зелёная палитра #f0fdf4)",
-        "Шрифт Inter и JetBrains Mono",
-        "Плавающие математические символы Σ, ₽, =",
-        "Заголовок по центру: ВЫХОДНАЯ ФОРМА",
-        "Логотип XLSX в шапке (слева и справа)",
-        "Логотип Стикер в зоне загрузки (без тени, 50% размера)",
-        "История стабильных версий в футере",
-        "Обработка нулевых цен для ТМЦ",
-        "Формат полной точности для колонок C:E",
-        "Форматирование целых чисел (макрос Форматирование_Целых_Чисел)",
-        "Формулы для КЕР обёрнуты в ЕСЛИОШИБКА",
-        "Формат стоимости КЕР в русской локали",
-        "Все 19 колонок (A-S) выводятся в Excel-файл",
-        "Заливка пустых ячеек по типам строк",
-        "Группировка служебных колонок (скрыты в Excel)",
-        "Заголовки листов СМР уник и ТМЦ уник обновлены",
-        "Формулы в колонке F для СМР уник и ТМЦ уник",
-        "Итоговые суммы в последних строках"
-      ]
-    },
-    {
-      version: "1.0.0",
-      date: "2026-08-22",
-      changes: [
-        "Первая стабильная версия",
-        "Обработка листа Свод с 19 колонками (A-S)",
-        "Нумерация иерархии (О, К, С, У, Э, Л1-Л3, ГР, КЕР, ТМЦ)",
-        "Формулы для расчёта СМР и ТМЦ",
-        "Форматирование ячеек по типам строк",
-        "Обработка листов СМР уник и ТМЦ уник",
-        "Экспорт в Excel с сохранением форматирования"
-      ]
+export interface ProcessingResult {
+  success: boolean;
+  message: string;
+  workbook?: XLSX.WorkBook;
+  sheets?: SheetData[];
+}
+
+export interface ProcessingLog {
+  step: string;
+  status: 'success' | 'error' | 'warning';
+  message: string;
+}
+
+export function validateWorkbook(wb: XLSX.WorkBook): { valid: boolean; message: string } {
+  const sheetNames = wb.SheetNames;
+  
+  if (sheetNames.length < 3) {
+    return { valid: false, message: 'Файл должен содержать минимум 3 листа' };
+  }
+
+  if (sheetNames[0] !== 'Свод') {
+    return { valid: false, message: `Имя листа 1 ("${sheetNames[0]}") не соответствует инструкции. Ожидается "Свод"` };
+  }
+  if (sheetNames[1] !== 'СМР уник') {
+    return { valid: false, message: `Имя листа 2 ("${sheetNames[1]}") не соответствует инструкции. Ожидается "СМР уник"` };
+  }
+  if (sheetNames[2] !== 'ТМЦ уник') {
+    return { valid: false, message: `Имя листа 3 ("${sheetNames[2]}") не соответствует инструкции. Ожидается "ТМЦ уник"` };
+  }
+
+  return { valid: true, message: 'Структура файла проверена успешно' };
+}
+
+export function performNumbering(data: any[][]): { data: any[][]; nElements: number } {
+  const nElements = data.length - 1;
+  let nO = 0, nK = 0, nC = 0, nU = 0, nE = 0;
+  let nL1 = 0, nL2 = 0, nL3 = 0, nL4 = 0;
+  let nGr = 0, nKER = 0, nTMZ = 0;
+  let r1 = '', r2 = '', r3 = '', r4 = '', r5 = '';
+  let r6 = '', r7 = '', r8 = '', r9 = '';
+  let r10 = '', r11 = '', r12 = '';
+
+  for (let i = 0; i < data.length; i++) {
+    while (data[i].length < 20) {
+      data[i].push(null);
     }
-  ];
+  }
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  data[0][0] = 'Код ССР\nИД КЕР\nИД ТМЦ';
+  data[0][1] = 'Статья ССР\nНаименование КЕР\nНаименование ТМЦ';
+  data[0][2] = 'ЕдИзм КЕР\nЕдИзм ТМЦ';
+  data[0][3] = 'Объем СМР\nРасход ТМЦ';
+  data[0][4] = 'Цена СМР\nза ЕдИзм КЕР\nОбъем ТМЦ';
+  data[0][5] = 'Цена ТМЦ\nза ЕдИзм КЕР\nза ЕдИзм ТМЦ';
+  data[0][6] = 'Цена\nСМР+ТМЦ\nза ЕдИзм КЕР';
+  data[0][7] = 'СМР всего\nруб с НДС';
+  data[0][8] = 'ТМЦ всего\nруб с НДС';
+  data[0][9] = 'Стоимость\nвсего\nруб с НДС';
+  
+  data[0][10] = 'ТА';
+  data[0][11] = 'КЕР.в.СР';
+  data[0][12] = 'Было.Объем.КЕР_ТМЦ';
+  data[0][13] = 'Количество точек';
+  data[0][14] = 'Иерархия';
+  data[0][15] = 'Признак КЕР';
+  data[0][16] = 'Признак ТМЦ';
+  data[0][17] = 'ИД.ДС';
+  data[0][18] = 'ИД.акта.ДС.ФСК';
+  data[0][19] = 'ИД.Бюджетная.Статья.1С';
 
-    setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const arrayBuffer = e.target?.result as ArrayBuffer;
-      setPendingFile(arrayBuffer);
+  for (let i = 1; i <= nElements; i++) {
+    const row = data[i];
+    const type = row[10];
 
-      // Сначала обрабатываем без листа 1С
-      const { result: res, logs: lgs } = processWorkbookWith1C(arrayBuffer, false);
-      setResult(res);
-      setLogs(lgs);
-      setActiveSheet(0);
+    if (type === 'О') {
+      nO++; r1 = nO + '.';
+      row[12] = nO;
+      nK = 0; nC = 0; nU = 0; nE = 0; nL1 = 0; nL2 = 0; nL3 = 0; nL4 = 0; nGr = 0; nKER = 0; nTMZ = 0;
+    } else if (type === 'К') {
+      nK++; r2 = nK + '.';
+      row[12] = r1 + nK;
+      nC = 0; nU = 0; nE = 0; nL1 = 0; nL2 = 0; nL3 = 0; nL4 = 0; nGr = 0; nKER = 0; nTMZ = 0;
+    } else if (type === 'С') {
+      nC++; r3 = nC + '.';
+      row[12] = r1 + r2 + nC;
+      nU = 0; nE = 0; nL1 = 0; nL2 = 0; nL3 = 0; nL4 = 0; nGr = 0; nKER = 0; nTMZ = 0;
+    } else if (type === 'У') {
+      nU++; r4 = nU + '.';
+      row[12] = r1 + r2 + r3 + nU;
+      nE = 0; nL1 = 0; nL2 = 0; nL3 = 0; nL4 = 0; nGr = 0; nKER = 0; nTMZ = 0;
+    } else if (type === 'Э') {
+      nE++; r5 = nE + '.';
+      row[12] = r1 + r2 + r3 + r4 + nE;
+      nL1 = 0; nL2 = 0; nL3 = 0; nL4 = 0; nGr = 0; nKER = 0; nTMZ = 0;
+    } else if (type === 'Л1') {
+      nL1++; r6 = nL1 + '.';
+      row[12] = r1 + r2 + r3 + r4 + r5 + nL1;
+      nL2 = 0; nL3 = 0; nL4 = 0; nGr = 0; nKER = 0; nTMZ = 0;
+    } else if (type === 'Л2') {
+      nL2++; r7 = nL2 + '.';
+      row[12] = r1 + r2 + r3 + r4 + r5 + r6 + nL2;
+      nL3 = 0; nL4 = 0; nGr = 0; nKER = 0; nTMZ = 0;
+    } else if (type === 'Л3') {
+      nL3++; r8 = nL3 + '.';
+      row[12] = r1 + r2 + r3 + r4 + r5 + r6 + r7 + nL3;
+      nL4 = 0; nGr = 0; nKER = 0; nTMZ = 0;
+    } else if (type === 'Л4') {
+      nL4++; r9 = nL4 + '.';
+      row[12] = r1 + r2 + r3 + r4 + r5 + r6 + r7 + r8 + nL4;
+      nGr = 0; nKER = 0; nTMZ = 0;
+    } else if (type === 'ГР') {
+      nGr++; r10 = nGr + '.';
+      row[12] = r1 + r2 + r3 + r4 + r5 + r6 + r7 + r8 + r9 + nGr;
+      nKER = 0; nTMZ = 0;
+    } else if (type === 'КЕР') {
+      nKER++; r11 = nKER + '.';
+      row[12] = r1 + r2 + r3 + r4 + r5 + r6 + r7 + r8 + r9 + r10 + nKER;
+      row[15] = 1;
+      if (row[0] !== null && row[0] !== undefined) {
+        const numVal = Number(row[0]);
+        if (!isNaN(numVal)) row[0] = numVal;
+      }
+    } else if (type === 'ТМЦ') {
+      nTMZ++; r12 = nTMZ + '.';
+      row[12] = r1 + r2 + r3 + r4 + r5 + r6 + r7 + r8 + r9 + r10 + r11 + nTMZ;
+      row[16] = 1;
+      if (row[0] !== null && row[0] !== undefined) {
+        const numVal = Number(row[0]);
+        if (!isNaN(numVal)) row[0] = numVal;
+      }
+    }
 
-      // Показываем диалог о добавлении листа 1С
-      // setShowDialog1C(true); // Временно отключено
+    if (row[12] !== null && row[12] !== undefined) {
+      const str = String(row[12]);
+      row[13] = (str.match(/\./g) || []).length;
+      const dots = row[13];
+      if (dots > 0) {
+        const parts = str.split('.');
+        let hier = '';
+        for (let d = 0; d < dots; d++) {
+          hier += parts[d] + '.';
+        }
+        row[14] = hier;
+      } else {
+        row[14] = str;
+      }
+    }
+  }
+
+  return { data, nElements };
+}
+
+export function computeFormulas(data: any[][], nElements: number, smrUnikData: any[][], tmzUnikData: any[][]): { data: any[][]; formulas: any[][] } {
+  const smrDict: Map<number, { price: number; volume: number }> = new Map();
+  const tmzDict: Map<number, { price: number; volume: number }> = new Map();
+
+  for (let i = 1; i < smrUnikData.length; i++) {
+    const id = Number(smrUnikData[i][0]);
+    if (!isNaN(id)) {
+      smrDict.set(id, { price: Number(smrUnikData[i][4]) || 0, volume: Number(smrUnikData[i][3]) || 0 });
+    }
+  }
+
+  for (let i = 1; i < tmzUnikData.length; i++) {
+    const id = Number(tmzUnikData[i][0]);
+    if (!isNaN(id)) {
+      tmzDict.set(id, { price: Number(tmzUnikData[i][4]) || 0, volume: Number(tmzUnikData[i][3]) || 0 });
+    }
+  }
+
+  const formulas: any[][] = data.map(row => new Array(row.length).fill(null));
+
+  for (let i = 1; i <= nElements; i++) {
+    const row = data[i];
+    const formulaRow = formulas[i];
+    const isKER = row[15] === 1;
+    const isTMZ = row[16] === 1;
+    const rowNum = i + 1;
+
+    if (isKER) {
+      const kodSSR = Number(row[0]);
+      const volume = Number(row[3]) || 0;
+      
+      formulaRow[4] = 'IFERROR(ROUND(VLOOKUP(A' + rowNum + ",'СМР уник'!A:F,5,FALSE),2)*P" + rowNum + ',0)';
+      if (!isNaN(kodSSR) && smrDict.has(kodSSR)) {
+        const smrInfo = smrDict.get(kodSSR)!;
+        row[4] = Math.round(smrInfo.price * volume * 100) / 100;
+      } else {
+        row[4] = 0;
+      }
+
+      const hier = row[12];
+      let sumG = 0;
+      let countChildren = 0;
+      for (let j = 1; j <= nElements; j++) {
+        if (j === i) continue;
+        const childHier = String(data[j][12] || '');
+        if (childHier.startsWith(String(hier) + '.') && data[j][16] === 1) {
+          sumG += Number(data[j][6]) || 0;
+          countChildren++;
+        }
+      }
+      formulaRow[5] = 'ROUND(SUMIF(O:O,M' + rowNum + '&".",G:G)/D' + rowNum + ',2)';
+      if (countChildren > 0 && Number(row[3]) !== 0) {
+        row[5] = Math.round(sumG / Number(row[3]) * 100) / 100;
+      } else {
+        row[5] = 0;
+      }
+
+      formulaRow[6] = 'ROUND(E' + rowNum + '+F' + rowNum + ',2)';
+      row[6] = Math.round((Number(row[4]) + Number(row[5])) * 100) / 100;
+
+      formulaRow[7] = 'ROUND(D' + rowNum + '*E' + rowNum + ',2)';
+      row[7] = Math.round(Number(row[3]) * Number(row[4]) * 100) / 100;
+
+      let tmzTotal = 0;
+      for (let j = 1; j <= nElements; j++) {
+        if (j === i) continue;
+        const childHier = String(data[j][12] || '');
+        if (childHier.startsWith(String(hier) + '.') && data[j][16] === 1) {
+          tmzTotal += Number(data[j][6]) || 0;
+        }
+      }
+      formulaRow[8] = 'IFERROR(ROUND(IF(P' + rowNum + '=1,SUM(OFFSET($G' + rowNum + ',1,0,COUNTIF($O:$O,$M' + rowNum + '&"."))),0),2),0)';
+      row[8] = Math.round(tmzTotal * 100) / 100;
+
+      formulaRow[9] = 'ROUND(H' + rowNum + '+I' + rowNum + ',2)';
+      row[9] = Math.round((Number(row[7]) + Number(row[8])) * 100) / 100;
+
+    } else if (isTMZ) {
+      const kodSSR = Number(row[0]);
+      const price = Number(row[5]) || 0;
+      
+      if (price === 0) {
+        formulaRow[5] = '0';
+        row[5] = 0;
+      } else {
+        formulaRow[5] = 'IFERROR(ROUND(VLOOKUP(A' + rowNum + ",'ТМЦ уник'!A:E,5,FALSE),2)*Q" + rowNum + ',0)';
+        if (!isNaN(kodSSR) && tmzDict.has(kodSSR)) {
+          const tmzInfo = tmzDict.get(kodSSR)!;
+          row[5] = Math.round(tmzInfo.price * Number(row[3]) * 100) / 100;
+        } else {
+          row[5] = 0;
+        }
+      }
+
+      formulaRow[6] = 'ROUND(E' + rowNum + '*F' + rowNum + ',2)';
+      row[6] = Math.round(Number(row[4]) * Number(row[5]) * 100) / 100;
+
+    } else {
+      const hier = row[12];
+      if (hier !== null && hier !== undefined) {
+        formulaRow[7] = 'ROUND(SUMIF(O:O,M' + rowNum + '&".",H:H),2)';
+        let smrTotal = 0;
+        let tmzTotal = 0;
+        for (let j = 1; j <= nElements; j++) {
+          const childHier = String(data[j][12] || '');
+          if (childHier.startsWith(String(hier) + '.')) {
+            if (data[j][15] === 1) {
+              smrTotal += Number(data[j][7]) || 0;
+              tmzTotal += Number(data[j][8]) || 0;
+            }
+          }
+        }
+        row[7] = Math.round(smrTotal * 100) / 100;
+
+        formulaRow[8] = 'ROUND(SUMIF(O:O,M' + rowNum + '&".",I:I),2)';
+        row[8] = Math.round(tmzTotal * 100) / 100;
+
+        formulaRow[9] = 'ROUND(H' + rowNum + '+I' + rowNum + ',2)';
+        row[9] = Math.round((smrTotal + tmzTotal) * 100) / 100;
+      }
+    }
+  }
+
+  formatIntegerNumbers(data, smrUnikData, tmzUnikData, nElements);
+
+  return { data, formulas };
+}
+
+function formatIntegerNumbers(svodData: any[][], smrData: any[][], tmzData: any[][], nElements: number) {
+  for (let i = 1; i <= nElements; i++) {
+    const val = svodData[i]?.[3];
+    if (typeof val === 'number' && val === Math.floor(val)) {
+      // Целое число - формат #,##0.00
+    }
+  }
+}
+
+export function processSMRUnik(smrData: any[][], svodData: any[][]): { data: any[][]; formulas: any[][] } {
+  const nElements = smrData.length - 1;
+
+  for (let i = 0; i < smrData.length; i++) {
+    while (smrData[i].length < 15) smrData[i].push(null);
+  }
+
+  smrData[0][0] = 'ИД.КЕР';
+  smrData[0][1] = 'Наименование\nКЕР';
+  smrData[0][2] = 'ЕдИзм КЕР';
+  smrData[0][3] = 'Объем СМР\nВсего в СР';
+  smrData[0][4] = 'СМР за ЕдИзм';
+  smrData[0][5] = 'СМР Всего';
+  smrData[0][6] = 'Состав Работ';
+  smrData[0][7] = 'ФЕР для КЕР';
+  smrData[0][8] = 'Цена СМР\nмедиана';
+  smrData[0][9] = 'Цена СМР\nсредняя';
+  smrData[0][10] = 'Резервный\nстолбец';
+  smrData[0][11] = '';
+  smrData[0][12] = 'Объем СМР\nиз Свод';
+  smrData[0][13] = 'Проверка';
+
+  const formulas: any[][] = smrData.map(row => new Array(row.length).fill(null));
+
+  const svodSums: Map<number, number> = new Map();
+  for (let i = 1; i < svodData.length; i++) {
+    if (svodData[i][15] === 1) {
+      const id = Number(svodData[i][0]);
+      if (!isNaN(id)) {
+        const vol = Number(svodData[i][3]) || 0;
+        svodSums.set(id, (svodSums.get(id) || 0) + vol);
+      }
+    }
+  }
+
+  let totalSMR = 0;
+  for (let i = 1; i <= nElements; i++) {
+    const row = smrData[i];
+    const formulaRow = formulas[i];
+    const id = Number(row[0]);
+    const rowNum = i + 1;
+    
+    if (!isNaN(id) && svodSums.has(id)) {
+      row[12] = svodSums.get(id);
+    } else {
+      row[12] = 0;
+    }
+
+    const localVol = Number(row[3]) || 0;
+    row[13] = Math.round((Number(row[12]) - localVol) * 100) / 100;
+    
+    formulaRow[5] = 'ROUND(D' + rowNum + '*E' + rowNum + ',2)';
+    
+    row[5] = Math.round(Number(row[3]) * Number(row[4]) * 100) / 100;
+    totalSMR += Number(row[5]) || 0;
+  }
+
+  smrData[nElements + 1] = smrData[nElements + 1] || [];
+  while (smrData[nElements + 1].length < 15) smrData[nElements + 1].push(null);
+  
+  const totalRow = nElements + 1;
+  formulas[totalRow] = formulas[totalRow] || new Array(15).fill(null);
+  formulas[totalRow][5] = 'SUM(F2:F' + (nElements + 1) + ')';
+  smrData[totalRow][5] = Math.round(totalSMR * 100) / 100;
+  smrData[totalRow][1] = 'ИТОГО';
+
+  return { data: smrData, formulas };
+}
+
+export function processTMZUnik(tmzData: any[][], svodData: any[][]): { data: any[][]; formulas: any[][] } {
+  const nElements = tmzData.length - 1;
+
+  for (let i = 0; i < tmzData.length; i++) {
+    while (tmzData[i].length < 14) tmzData[i].push(null);
+  }
+
+  tmzData[0][0] = 'ИД.ТМЦ';
+  tmzData[0][1] = 'Наименование\nТМЦ';
+  tmzData[0][2] = 'ЕдИзм ТМЦ';
+  tmzData[0][3] = 'Объем ТМЦ\nВсего в СР';
+  tmzData[0][4] = 'Цена ТМЦ\nза ЕдИзм';
+  tmzData[0][5] = 'ТМЦ Всего';
+  tmzData[0][6] = 'ИД.Поставщика';
+  tmzData[0][7] = 'Имя.Поставщика';
+  tmzData[0][8] = 'Номинация';
+  tmzData[0][9] = 'Резервный\nстолбец';
+  tmzData[0][10] = '';
+  tmzData[0][11] = 'Объем ТМЦ\nиз Свод';
+  tmzData[0][12] = 'Проверка';
+
+  const formulas: any[][] = tmzData.map(row => new Array(row.length).fill(null));
+
+  const svodSums: Map<number, number> = new Map();
+  for (let i = 1; i < svodData.length; i++) {
+    if (svodData[i][16] === 1) {
+      const id = Number(svodData[i][0]);
+      if (!isNaN(id)) {
+        const vol = Number(svodData[i][3]) || 0;
+        svodSums.set(id, (svodSums.get(id) || 0) + vol);
+      }
+    }
+  }
+
+  let totalTMZ = 0;
+  for (let i = 1; i <= nElements; i++) {
+    const row = tmzData[i];
+    const formulaRow = formulas[i];
+    const id = Number(row[0]);
+    const rowNum = i + 1;
+    
+    if (!isNaN(id) && svodSums.has(id)) {
+      row[11] = svodSums.get(id);
+    } else {
+      row[11] = 0;
+    }
+
+    const localVol = Number(row[3]) || 0;
+    row[12] = Math.round((Number(row[11]) - localVol) * 100) / 100;
+    
+    formulaRow[5] = 'ROUND(D' + rowNum + '*E' + rowNum + ',2)';
+    
+    row[5] = Math.round(Number(row[3]) * Number(row[4]) * 100) / 100;
+    totalTMZ += Number(row[5]) || 0;
+  }
+
+  tmzData[nElements + 1] = tmzData[nElements + 1] || [];
+  while (tmzData[nElements + 1].length < 14) tmzData[nElements + 1].push(null);
+  
+  const totalRow = nElements + 1;
+  formulas[totalRow] = formulas[totalRow] || new Array(14).fill(null);
+  formulas[totalRow][5] = 'SUM(F2:F' + (nElements + 1) + ')';
+  tmzData[totalRow][5] = Math.round(totalTMZ * 100) / 100;
+  tmzData[totalRow][1] = 'ИТОГО';
+
+  return { data: tmzData, formulas };
+}
+
+export function getRowType(data: any[][], rowIndex: number): string {
+  if (rowIndex === 0) return 'header';
+  return data[rowIndex]?.[10] || '';
+}
+
+export function getRowStyle(type: string, colIndex?: number): string {
+  const baseStyles: { [key: string]: string } = {
+    'О': 'bg-[#FFF2CB]',
+    'К': 'bg-[#D9E2F3]',
+    'С': 'bg-[#D9E2F3]',
+    'У': 'bg-[#D9E2F3]',
+    'Э': 'bg-[#D9E2F3]',
+    'Л1': 'bg-[#F2F2F2]',
+    'Л2': 'bg-[#F2F2F2]',
+    'Л3': 'bg-[#F2F2F2]',
+    'ГР': 'bg-[#FFD965] font-bold',
+    'КЕР': 'bg-white',
+    'ТМЦ': 'bg-[#E2EFD9]',
+    'header': 'bg-[#dcfce7]',
+  };
+
+  if (colIndex !== undefined && colIndex > 9) {
+    return '';
+  }
+
+  const italicTypes = ['О', 'К', 'С', 'У', 'Э', 'Л1', 'Л2', 'Л3'];
+  if (colIndex !== undefined && colIndex > 0 && italicTypes.includes(type)) {
+    return (baseStyles[type] || 'bg-white') + ' italic';
+  }
+
+  return baseStyles[type] || 'bg-white';
+}
+
+export function getSheet1CRowStyle(data: any[][], rowIndex: number): string {
+  if (rowIndex === 0) return 'header';
+  const rowTypes = (data as any)._rowTypes;
+  if (!rowTypes) return '';
+  const type = rowTypes[rowIndex - 1];
+  
+  switch (type) {
+    case 'О': return 'bg-[#D9D9D9] font-bold text-sm';
+    case 'К': return 'font-bold text-base pl-4';
+    case 'С': return 'pl-8';
+    case 'У': return 'pl-12';
+    case 'Э': return 'pl-16';
+    case 'Л1': return 'text-xs pl-20';
+    case 'Л2': return 'text-xs pl-24';
+    case 'Л3': return 'text-xs pl-28';
+    case 'КЕР': return 'bg-[#FFFFCC] font-bold';
+    case 'КЕР_ТМЦ': 
+    case 'ТМЦ': return 'bg-[#C6EFCE]';
+    default: return '';
+  }
+}
+
+function applySvodStyles(ws: XLSX.WorkSheet, data: any[][]) {
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  
+  for (let R = range.s.r; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= Math.min(range.e.c, 19); C++) {
+      const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+      
+      if (!ws[cellRef]) {
+        ws[cellRef] = { t: 's', v: '', w: '' };
+      }
+      const cell = ws[cellRef];
+      
+      const style: any = {
+        font: { name: 'Calibri', sz: 8, color: { rgb: '000000' } },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+        border: {
+          top: { style: 'thin', color: { rgb: '000000' } },
+          bottom: { style: 'thin', color: { rgb: '000000' } },
+          left: { style: 'thin', color: { rgb: '000000' } },
+          right: { style: 'thin', color: { rgb: '000000' } }
+        }
+      };
+      
+      if (R === 0) {
+        style.fill = { fgColor: { rgb: 'D8D8D8' } };
+        style.font = { name: 'Calibri', sz: 8, color: { rgb: '000000' } };
+      } else {
+        const type = data[R]?.[10];
+        
+        if (C <= 9) {
+          switch (type) {
+            case 'О':
+              style.fill = { fgColor: { rgb: 'FFF2CB' } };
+              if (C > 0) {
+                style.font.italic = true;
+              }
+              break;
+            case 'К':
+            case 'С':
+            case 'У':
+            case 'Э':
+              style.fill = { fgColor: { rgb: 'D9E2F3' } };
+              if (C > 0) {
+                style.font.italic = true;
+              }
+              break;
+            case 'Л1':
+            case 'Л2':
+            case 'Л3':
+              style.fill = { fgColor: { rgb: 'F2F2F2' } };
+              if (C > 0) {
+                style.font.italic = true;
+              }
+              break;
+            case 'ГР':
+              style.fill = { fgColor: { rgb: 'FFD965' } };
+              style.font.bold = true;
+              break;
+            case 'КЕР':
+              style.fill = { fgColor: { rgb: 'FFFFFF' } };
+              break;
+            case 'ТМЦ':
+              style.fill = { fgColor: { rgb: 'E2EFD9' } };
+              break;
+          }
+        }
+        
+        if (C === 0 || C === 1) {
+          style.alignment.horizontal = 'left';
+        } else if (C >= 3 && C <= 9) {
+          style.alignment.horizontal = 'right';
+        }
+        
+        if (C === 2) {
+          cell.z = '0.################';
+        } else if (C >= 3 && C <= 4) {
+          const val = data[R]?.[C];
+          if (typeof val === 'number' && val === Math.floor(val)) {
+            cell.z = '#,##0';
+          } else {
+            cell.z = '0.################';
+          }
+        } else if (C >= 5 && C <= 9) {
+          const val = data[R]?.[C];
+          if (typeof val === 'number' && val === Math.floor(val)) {
+            cell.z = '#,##0.00';
+          } else {
+            cell.z = '#,##0.00';
+          }
+        }
+      }
+      
+      cell.s = style;
+    }
+  }
+  
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: data.length - 1, c: 19 } });
+}
+
+function applySMRStyles(ws: XLSX.WorkSheet) {
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  
+  for (let R = range.s.r; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= Math.min(range.e.c, 13); C++) {
+      const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+      
+      if (!ws[cellRef]) {
+        ws[cellRef] = { t: 's', v: '', w: '' };
+      }
+      const cell = ws[cellRef];
+      
+      const style: any = {
+        font: { name: 'Calibri', sz: 8, color: { rgb: '000000' } },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+        border: {
+          top: { style: 'thin', color: { rgb: '000000' } },
+          bottom: { style: 'thin', color: { rgb: '000000' } },
+          left: { style: 'thin', color: { rgb: '000000' } },
+          right: { style: 'thin', color: { rgb: '000000' } }
+        }
+      };
+      
+      if (R === 0) {
+        style.fill = { fgColor: { rgb: 'D8D8D8' } };
+      } else {
+        if (C === 1 || C === 6) {
+          style.alignment.horizontal = 'left';
+        } else if (C >= 3 && C <= 5) {
+          style.alignment.horizontal = 'right';
+          const val = ws[cellRef]?.v;
+          if (typeof val === 'number' && val === Math.floor(val)) {
+            cell.z = '#,##0.00';
+          } else {
+            cell.z = '#,##0.00';
+          }
+        }
+      }
+      
+      cell.s = style;
+    }
+  }
+  
+  const maxRow = Math.max(...Object.keys(ws).filter(k => k.match(/^[A-Z]+\d+$/)).map(k => parseInt(k.match(/\d+/)?.[0] || '0')));
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: 13 } });
+}
+
+function applyTMZStyles(ws: XLSX.WorkSheet) {
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  
+  for (let R = range.s.r; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= Math.min(range.e.c, 12); C++) {
+      const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+      
+      if (!ws[cellRef]) {
+        ws[cellRef] = { t: 's', v: '', w: '' };
+      }
+      const cell = ws[cellRef];
+      
+      const style: any = {
+        font: { name: 'Calibri', sz: 8, color: { rgb: '000000' } },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+        border: {
+          top: { style: 'thin', color: { rgb: '000000' } },
+          bottom: { style: 'thin', color: { rgb: '000000' } },
+          left: { style: 'thin', color: { rgb: '000000' } },
+          right: { style: 'thin', color: { rgb: '000000' } }
+        }
+      };
+      
+      if (R === 0) {
+        style.fill = { fgColor: { rgb: 'D8D8D8' } };
+      } else {
+        if (C === 1) {
+          style.alignment.horizontal = 'left';
+        } else if (C >= 3 && C <= 5) {
+          style.alignment.horizontal = 'right';
+          const val = ws[cellRef]?.v;
+          if (typeof val === 'number' && val === Math.floor(val)) {
+            cell.z = '#,##0.00';
+          } else {
+            cell.z = '#,##0.00';
+          }
+        }
+      }
+      
+      cell.s = style;
+    }
+  }
+  
+  const maxRow = Math.max(...Object.keys(ws).filter(k => k.match(/^[A-Z]+\d+$/)).map(k => parseInt(k.match(/\d+/)?.[0] || '0')));
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: 12 } });
+}
+
+export function processWorkbookWith1C(file: ArrayBuffer, addSheet1C: boolean = false): { result: ProcessingResult; logs: ProcessingLog[] } {
+  const logs: ProcessingLog[] = [];
+  
+  try {
+    logs.push({ step: 'Чтение файла', status: 'success', message: 'Файл загружен успешно' });
+    const wb = XLSX.read(file, { type: 'array' });
+
+    const validation = validateWorkbook(wb);
+    if (!validation.valid) {
+      logs.push({ step: 'Проверка структуры', status: 'error', message: validation.message });
+      return { result: { success: false, message: validation.message }, logs };
+    }
+    logs.push({ step: 'Проверка структуры', status: 'success', message: validation.message });
+
+    const svodSheet = wb.Sheets['Свод'];
+    const smrSheet = wb.Sheets['СМР уник'];
+    const tmzSheet = wb.Sheets['ТМЦ уник'];
+
+    let svodData = XLSX.utils.sheet_to_json<any[]>(svodSheet, { header: 1, defval: null });
+    let smrData = XLSX.utils.sheet_to_json<any[]>(smrSheet, { header: 1, defval: null });
+    let tmzData = XLSX.utils.sheet_to_json<any[]>(tmzSheet, { header: 1, defval: null });
+
+    const { data: numberedData, nElements } = performNumbering(svodData);
+    logs.push({ step: 'Нумерация', status: 'success', message: `Обработано ${nElements} строк` });
+
+    const formulaResult = computeFormulas(numberedData, nElements, smrData, tmzData);
+    svodData = formulaResult.data;
+    const svodFormulas = formulaResult.formulas;
+    logs.push({ step: 'Вычисление формул', status: 'success', message: 'Формулы вычислены' });
+
+    const smrResult = processSMRUnik(smrData, svodData);
+    smrData = smrResult.data;
+    const smrFormulas = smrResult.formulas;
+    logs.push({ step: 'Обработка СМР уник', status: 'success', message: 'Лист СМР уник обработан' });
+
+    const tmzResult = processTMZUnik(tmzData, svodData);
+    tmzData = tmzResult.data;
+    const tmzFormulas = tmzResult.formulas;
+    logs.push({ step: 'Обработка ТМЦ уник', status: 'success', message: 'Лист ТМЦ уник обработан' });
+
+    const newWb = XLSX.utils.book_new();
+    
+    const svodWs = XLSX.utils.aoa_to_sheet(svodData);
+    svodWs['!cols'] = [
+      { wch: 12 }, { wch: 50 }, { wch: 10 }, { wch: 12 }, { wch: 12 },
+      { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+      { wch: 5, hidden: true }, { wch: 12, hidden: true }, { wch: 18, hidden: true },
+      { wch: 12, hidden: true }, { wch: 18, hidden: true }, { wch: 10, hidden: true },
+      { wch: 10, hidden: true }, { wch: 10, hidden: true }, { wch: 15, hidden: true },
+      { wch: 20, hidden: true },
+    ];
+    
+    applySvodStyles(svodWs, svodData);
+    
+    if (svodFormulas) {
+      for (let r = 0; r < svodFormulas.length; r++) {
+        for (let c = 0; c < svodFormulas[r].length; c++) {
+          if (svodFormulas[r][c]) {
+            const cellRef = XLSX.utils.encode_cell({ r, c });
+            if (svodWs[cellRef]) {
+              svodWs[cellRef].f = svodFormulas[r][c];
+            }
+          }
+        }
+      }
+    }
+    
+    XLSX.utils.book_append_sheet(newWb, svodWs, 'Свод');
+
+    const smrWs = XLSX.utils.aoa_to_sheet(smrData);
+    smrWs['!cols'] = [
+      { wch: 12 }, { wch: 50 }, { wch: 10 }, { wch: 12 }, { wch: 12 },
+      { wch: 12 }, { wch: 60 }, { wch: 12 },
+      { wch: 12, hidden: true }, { wch: 12, hidden: true }, { wch: 10, hidden: true },
+      { wch: 10, hidden: true }, { wch: 12, hidden: true }, { wch: 12, hidden: true },
+    ];
+    
+    applySMRStyles(smrWs);
+    
+    if (smrFormulas) {
+      for (let r = 0; r < smrFormulas.length; r++) {
+        for (let c = 0; c < smrFormulas[r].length; c++) {
+          if (smrFormulas[r][c]) {
+            const cellRef = XLSX.utils.encode_cell({ r, c });
+            if (smrWs[cellRef]) {
+              smrWs[cellRef].f = smrFormulas[r][c];
+            }
+          }
+        }
+      }
+    }
+    
+    XLSX.utils.book_append_sheet(newWb, smrWs, 'СМР уник');
+    
+    const tmzWs = XLSX.utils.aoa_to_sheet(tmzData);
+    tmzWs['!cols'] = [
+      { wch: 12 }, { wch: 50 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+      { wch: 12, hidden: true }, { wch: 12, hidden: true }, { wch: 12, hidden: true },
+      { wch: 10, hidden: true }, { wch: 10, hidden: true }, { wch: 12, hidden: true },
+      { wch: 12, hidden: true },
+    ];
+    
+    applyTMZStyles(tmzWs);
+    
+    if (tmzFormulas) {
+      for (let r = 0; r < tmzFormulas.length; r++) {
+        for (let c = 0; c < tmzFormulas[r].length; c++) {
+          if (tmzFormulas[r][c]) {
+            const cellRef = XLSX.utils.encode_cell({ r, c });
+            if (tmzWs[cellRef]) {
+              tmzWs[cellRef].f = tmzFormulas[r][c];
+            }
+          }
+        }
+      }
+    }
+    
+    XLSX.utils.book_append_sheet(newWb, tmzWs, 'ТМЦ уник');
+
+    const sheets: SheetData[] = [
+      { name: 'Свод', data: svodData, formulas: svodFormulas },
+      { name: 'СМР уник', data: smrData, formulas: smrFormulas },
+      { name: 'ТМЦ уник', data: tmzData, formulas: tmzFormulas },
+    ];
+
+    logs.push({ step: 'Завершение', status: 'success', message: `Обработка завершена. Листов: ${sheets.length}` });
+
+    return {
+      result: {
+        success: true,
+        message: `Файл обработан успешно. Создано листов: ${sheets.length}`,
+        workbook: newWb,
+        sheets
+      },
+      logs
     };
-    reader.readAsArrayBuffer(file);
-  };
 
-  // Временно отключено - создание листа 1С
-  // const handleAddSheet1C = (add: boolean) => {
-  //   if (add && pendingFile) {
-  //     // Переобрабатываем с листом 1С
-  //     const { result: res, logs: lgs } = processWorkbookWith1C(pendingFile, true);
-  //     setResult(res);
-  //     setLogs(lgs);
-  //   }
-  //   setShowDialog1C(false);
-  // };
+  } catch (error) {
+    logs.push({ step: 'Ошибка', status: 'error', message: `Ошибка обработки: ${(error as Error).message}` });
+    return {
+      result: { success: false, message: `Ошибка обработки: ${(error as Error).message}` },
+      logs
+    };
+  }
+}
 
-  const handleExport = () => {
-    if (result?.workbook) {
-      exportToExcel(result.workbook, fileName.replace('.xlsx', '_обработанный.xlsx'));
-    }
-  };
-
-  const handleReset = () => {
-    setResult(null);
-    setLogs([]);
-    setFileName('');
-    setActiveSheet(0);
-    // setShowDialog1C(false); // Временно отключено
-    setPendingFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  return (
-    <div className="min-h-screen">
-      {/* Плавающие математические символы */}
-      <div className="floating-symbol">Σ</div>
-      <div className="floating-symbol">₽</div>
-      <div className="floating-symbol">=</div>
-
-      {/* Header */}
-      <header className="bg-[#f0fdf4] text-black shadow-lg" style={{ boxShadow: 'var(--shadow-hard-green)' }}>
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center">
-            <img src="/logoXLSX.png" alt="Excel" className="w-20 h-20 rounded-xl" style={{ boxShadow: 'var(--shadow-hard)' }} />
-            <div className="flex-1 text-center">
-              <h1 className="text-2xl font-bold text-black uppercase">Выходная форма</h1>
-              <p className="text-sm text-black/80">обработка репорт Стикер 2.0 · нумерация · формулы</p>
-            </div>
-            <img src="/logoXLSX.png" alt="Excel" className="w-20 h-20 rounded-xl" style={{ boxShadow: 'var(--shadow-hard)' }} />
-          </div>
-
-          {fileName && (
-            <div className="mt-4 flex items-center justify-between bg-white/50 rounded-lg px-4 py-2">
-              <span className="font-mono text-sm text-black">{fileName}</span>
-              <div className="flex items-center gap-3">
-                {result && (
-                  <button
-                    onClick={handleExport}
-                    className="flex items-center gap-2 bg-[#16a34a] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#14532d] transition-colors"
-                    style={{ boxShadow: 'var(--shadow-hard)' }}
-                  >
-                    <div className="w-5 h-5 bg-white rounded flex items-center justify-center text-[#16a34a] font-bold text-xs">
-                      X
-                    </div>
-                    <span>Скачать</span>
-                  </button>
-                )}
-                <button
-                  onClick={handleReset}
-                  className="text-sm text-black hover:text-red-600 transition-colors"
-                >
-                  Сброс
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {!result ? (
-          // Drop Zone
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-white rounded-xl p-12 border-2 border-dashed border-[#86efac] hover:border-[#16a34a] transition-colors" style={{ boxShadow: 'var(--shadow-hard)' }}>
-              <div className="text-center">
-                <img src="/logoStiker.png" alt="Стикер" className="mx-auto mb-6 max-w-[50%] h-auto" />
-                <h2 className="text-2xl font-bold text-[#14532d] mb-2">
-                  Перетащите репорт Стикер 2.0 сюда
-                </h2>
-                <p className="text-[#14532d]/70 mb-6">или нажмите, чтобы выбрать файл · .xlsx</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-[#16a34a] hover:bg-[#14532d] text-white px-8 py-3 rounded-lg font-semibold transition-colors"
-                  style={{ boxShadow: 'var(--shadow-hard-green)' }}
-                >
-                  Выбрать файл
-                </button>
-                <p className="text-xs text-[#14532d]/60 mt-6">
-                  💡 Файл обрабатывается локально в браузере и никуда не отправляется
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          // Results
-          <div className="space-y-6">
-            {/* Logs */}
-            <div className="bg-white rounded-xl p-6" style={{ boxShadow: 'var(--shadow-hard)' }}>
-              <h2 className="text-lg font-bold text-[#14532d] mb-4">Журнал обработки</h2>
-              <div className="space-y-2">
-                {logs.map((log, idx) => (
-                  <div key={idx} className="flex items-center gap-3 text-sm">
-                    <span className={`w-2 h-2 rounded-full ${
-                      log.status === 'success' ? 'bg-[#16a34a]' :
-                      log.status === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-                    }`}></span>
-                    <span className="font-semibold text-[#14532d]">{log.step}:</span>
-                    <span className="text-[#14532d]/70">{log.message}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Sheet Tabs */}
-            <div className="bg-white rounded-xl overflow-hidden" style={{ boxShadow: 'var(--shadow-hard)' }}>
-              <div className="border-b border-[#86efac]">
-                <div className="flex overflow-x-auto">
-                  {result.sheets?.map((sheet: any, idx: number) => (
-                    <button
-                      key={idx}
-                      onClick={() => setActiveSheet(idx)}
-                      className={`px-6 py-3 font-semibold whitespace-nowrap transition-colors ${
-                        activeSheet === idx
-                          ? 'bg-[#16a34a] text-white'
-                          : 'bg-[#f0fdf4] text-[#14532d] hover:bg-[#dcfce7]'
-                      }`}
-                    >
-                      {sheet.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Table */}
-              <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-[#dcfce7] sticky top-0">
-                    <tr>
-                      {(() => {
-                        // Для листа Свод показываем только первые 10 колонок (A-J)
-                        const numCols = activeSheet === 0 ? 10 : (result.sheets?.[activeSheet]?.data[0]?.length || 0);
-                        return Array.from({ length: numCols }, (_, colIdx) => {
-                          const cell = result.sheets?.[activeSheet]?.data[0]?.[colIdx];
-                          return (
-                            <th key={colIdx} className="px-3 py-2 text-left font-semibold text-[#14532d] border-b-2 border-[#16a34a] whitespace-pre-line">
-                              {cell || ''}
-                            </th>
-                          );
-                        });
-                      })()}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.sheets?.[activeSheet]?.data.slice(1).map((row: any[], rowIdx: number) => {
-                      const type = activeSheet === 0 ? getRowType(result.sheets[0].data, rowIdx + 1) : '';
-                      // Для листа Свод показываем только первые 10 колонок (A-J)
-                      const numCols = activeSheet === 0 ? 10 : row.length;
-
-                      return (
-                        <tr key={rowIdx} className={activeSheet === 0 ? getRowStyle(type) : 'hover:bg-[#f0fdf4]'}>
-                          {Array.from({ length: numCols }, (_, colIdx) => {
-                            const cell = row[colIdx];
-                            let cellStyle = '';
-
-                            if (activeSheet === 0) {
-                              cellStyle = getRowStyle(type, colIdx);
-                            }
-
-                            return (
-                              <td
-                                key={colIdx}
-                                className={`px-3 py-2 border-b border-[#86efac] ${cellStyle} text-[#14532d]`}
-                              >
-                                {cell !== null && cell !== undefined ? String(cell) : ''}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Export Button */}
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={handleExport}
-                className="bg-[#16a34a] hover:bg-[#14532d] text-white px-12 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 flex items-center gap-3"
-                style={{ boxShadow: 'var(--shadow-hard-green)' }}
-              >
-                <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-[#16a34a] font-bold text-sm">
-                  X
-                </div>
-                <span>Скачать Excel</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* Dialog 1C - Временно отключено */}
-      {/* {showDialog1C && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md">
-            <div className="flex items-center gap-4 mb-6">
-              <img src="/logo1C.png" alt="1С" className="w-12 h-12" />
-              <h3 className="text-xl font-bold text-slate-800">Добавить лист «1С»?</h3>
-            </div>
-            <p className="text-slate-600 mb-6">
-              Основной файл обработан. Хотите добавить дополнительный лист «1С» с форматированием для выгрузки в 1С?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleAddSheet1C(true)}
-                className="flex-1 bg-[#1e7145] hover:bg-[#123f28] text-white px-4 py-2 rounded-lg font-semibold shadow-md transition-colors"
-              >
-                Да, добавить
-              </button>
-              <button
-                onClick={() => handleAddSheet1C(false)}
-                className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-semibold transition-colors"
-              >
-                Нет, пропустить
-              </button>
-            </div>
-          </div>
-        </div>
-      )} */}
-
-      {/* Floating Download Button */}
-      {result && (
-        <button
-          onClick={handleExport}
-          className="fixed bottom-8 right-8 bg-[#16a34a] hover:bg-[#14532d] text-white px-6 py-4 rounded-full font-bold transition-all transform hover:scale-110 flex items-center gap-3 border-4 border-white z-40"
-          style={{ boxShadow: 'var(--shadow-hard-green)' }}
-          title="Скачать Excel файл"
-        >
-          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#16a34a] font-bold text-sm">
-            X
-          </div>
-          <span className="hidden sm:inline">Скачать</span>
-        </button>
-      )}
-
-      {/* Footer */}
-      <footer className="mt-12 py-6 text-center text-sm text-[#14532d]/60">
-        <div className="max-w-7xl mx-auto px-4">
-          <p className="mb-2">Выходная форма — обработка репорт Стикер 2.0 · нумерация · формулы</p>
-          <button
-            onClick={() => setShowVersionHistory(true)}
-            className="text-xs text-[#14532d]/40 hover:text-[#16a34a] transition-colors underline"
-          >
-            Версия 1.2.0 от 18.09.2026
-          </button>
-        </div>
-      </footer>
-
-      {/* Модальное окно истории версий */}
-      {showVersionHistory && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden" style={{ boxShadow: 'var(--shadow-hard-green)' }}>
-            <div className="bg-gradient-to-r from-[#14532d] to-[#16a34a] text-white px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold">История стабильных версий</h2>
-              <button
-                onClick={() => setShowVersionHistory(false)}
-                className="text-white hover:text-red-300 transition-colors text-2xl"
-              >
-                ×
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
-              {versionHistory.map((version, idx) => (
-                <div key={idx} className="mb-6 last:mb-0">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="bg-[#16a34a] text-white px-3 py-1 rounded-lg font-bold text-sm">
-                      v{version.version}
-                    </span>
-                    <span className="text-[#14532d]/60 text-sm">
-                      {new Date(version.date).toLocaleDateString('ru-RU', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </span>
-                  </div>
-                  <ul className="space-y-2">
-                    {version.changes.map((change, changeIdx) => (
-                      <li key={changeIdx} className="flex items-start gap-2 text-[#14532d]">
-                        <span className="text-[#16a34a] mt-1">✓</span>
-                        <span>{change}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-            <div className="bg-[#f0fdf4] px-6 py-4 border-t border-[#86efac]">
-              <p className="text-xs text-[#14532d]/60">
-                💡 Все файлы обрабатываются локально в вашем браузере и не отправляются на сервер
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+export function exportToExcel(wb: XLSX.WorkBook, filename: string = 'Выходная_форма_Результат.xlsx') {
+  XLSX.writeFile(wb, filename, { bookType: 'xlsx' });
 }
