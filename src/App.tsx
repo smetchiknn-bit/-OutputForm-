@@ -353,7 +353,7 @@ export default function App() {
             onClick={() => setShowVersionHistory(true)}
             className="text-xs text-[#14532d]/40 hover:text-[#16a34a] transition-colors underline"
           >
-            Версия 1.2.0 от 18.09.2026
+            Версия 1.1.1 от 23.09.2026
           </button>
         </div>
       </footer>
