@@ -1,6 +1,10 @@
 import { useState, useRef } from 'react';
 import { processWorkbookWith1C, exportToExcel, getRowType, getRowStyle } from './utils/excelProcessor';
 
+// Импортируем изображения из папки assets для корректной работы на Vercel и GitHub Pages
+import logoXLSX from './assets/logoXLSX.png';
+import logoStiker from './assets/logoStiker.png';
+
 export default function App() {
   const [result, setResult] = useState<any>(null);
   const [logs, setLogs] = useState<any[]>([]);
@@ -37,7 +41,7 @@ export default function App() {
         "История стабильных версий в футере",
         "Обработка нулевых цен для ТМЦ",
         "Формат полной точности для колонок C:E",
-        "Форматирование целых чисел (макрос Форматирование_Целых_Чисел)",
+        "Форматирование целых чисел (макос Форматирование_Целых_Чисел)",
         "Формулы для КЕР обёрнуты в ЕСЛИОШИБКА",
         "Формат стоимости КЕР в русской локали",
         "Все 19 колонок (A-S) выводятся в Excel-файл",
@@ -125,12 +129,12 @@ export default function App() {
       <header className="bg-[#f0fdf4] text-black shadow-lg" style={{ boxShadow: 'var(--shadow-hard-green)' }}>
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center">
-            <img src="/logoXLSX.png" alt="Excel" className="w-20 h-20 rounded-xl" style={{ boxShadow: 'var(--shadow-hard)' }} />
+            <img src={logoXLSX} alt="Excel" className="w-20 h-20 rounded-xl" style={{ boxShadow: 'var(--shadow-hard)' }} />
             <div className="flex-1 text-center">
               <h1 className="text-2xl font-bold text-black uppercase">Выходная форма</h1>
               <p className="text-sm text-black/80">обработка репорт Стикер 2.0 · нумерация · формулы</p>
             </div>
-            <img src="/logoXLSX.png" alt="Excel" className="w-20 h-20 rounded-xl" style={{ boxShadow: 'var(--shadow-hard)' }} />
+            <img src={logoXLSX} alt="Excel" className="w-20 h-20 rounded-xl" style={{ boxShadow: 'var(--shadow-hard)' }} />
           </div>
 
           {fileName && (
@@ -168,7 +172,7 @@ export default function App() {
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-xl p-12 border-2 border-dashed border-[#86efac] hover:border-[#16a34a] transition-colors" style={{ boxShadow: 'var(--shadow-hard)' }}>
               <div className="text-center">
-                <img src="/logoStiker.png" alt="Стикер" className="mx-auto mb-6 max-w-[50%] h-auto" />
+                <img src={logoStiker} alt="Стикер" className="mx-auto mb-6 max-w-[50%] h-auto" />
                 <h2 className="text-2xl font-bold text-[#14532d] mb-2">
                   Перетащите репорт Стикер 2.0 сюда
                 </h2>
@@ -307,7 +311,7 @@ export default function App() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md">
             <div className="flex items-center gap-4 mb-6">
-              <img src="/logo1C.png" alt="1С" className="w-12 h-12" />
+              <img src={`${import.meta.env.BASE_URL}logo1C.png`} alt="1С" className="w-12 h-12" />
               <h3 className="text-xl font-bold text-slate-800">Добавить лист «1С»?</h3>
             </div>
             <p className="text-slate-600 mb-6">
