@@ -1,0 +1,56 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # Если ваша основная ветка называется 'master', замените 'main' на 'master'
+
+# Разрешения, необходимые для работы GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Разрешаем только одно одновременное развертывание
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout репозитория
+        uses: actions/checkout@v4
+
+      - name: Настройка Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Установка зависимостей
+        run: npm ci
+
+      - name: Сборка проекта
+        # Передаем переменную окружения, чтобы vite.config.js знал, что нужно использовать base: '/-OutputForm-/'
+        run: GITHUB_PAGES=true npm run build
+
+      - name: Исправление маршрутизации SPA (React Router)
+        # Копируем index.html в 404.html, чтобы при обновлении страницы на любом роуте GitHub Pages отдавал наш React-код
+        run: cp dist/index.html dist/404.html
+
+      - name: Настройка GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Загрузка артефакта сборки
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist' # Папка, куда Vite собирает проект по умолчанию
+
+      - name: Публикация на GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
