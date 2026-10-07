@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main # Если ваша основная ветка называется 'master', замените 'main' на 'master'
+      - main # Если ваша основная ветка называется 'master', замените на 'master'
 
 # Разрешения, необходимые для работы GitHub Pages
 permissions:
@@ -12,9 +12,10 @@ permissions:
   id-token: write
 
 # Разрешаем только одно одновременное развертывание
+# cancel-in-progress: true автоматически отменяет старую сборку при новом коммите
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
@@ -52,5 +53,4 @@ jobs:
           path: './dist' # Папка, куда Vite собирает проект по умолчанию
 
       - name: Публикация на GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        id
